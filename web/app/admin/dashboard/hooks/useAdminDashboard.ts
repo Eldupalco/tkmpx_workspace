@@ -2,59 +2,47 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast, useDisclosure } from '@chakra-ui/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth, User } from '@/features/auth';
 import {
-  fetchAttendances,
   postPunch,
   downloadAttendanceCsv,
   Attendance,
   PaginationMeta,
 } from '@/features/attendance';
 import {
-  fetchUsers,
-  fetchDashboardMetrics,
-  fetchCurrentlyIn,
+  adminKeys,
   deleteUser,
+  DashboardMetrics,
+  useAttendanceRoster,
+  useCurrentlyIn,
+  useDashboardMetrics,
+  useUsers,
 } from '@/features/users';
+
+const EMPTY_PULSE: DashboardMetrics = {
+  totalEmployees: 0,
+  checkedInToday: 0,
+  currentlyWorking: 0,
+  lateToday: 0,
+  onLeaveToday: 0,
+  notPunchedYet: 0,
+};
 
 export function useAdminDashboard() {
   const { token } = useAuth();
   const toast = useToast();
-
-  // API status & loading
-  const [isLiveApi, setIsLiveApi] = useState<boolean>(true);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [adminDataLoading, setAdminDataLoading] = useState<boolean>(true);
-
-  // Executive Metrics Pulse
-  const [pulse, setPulse] = useState({
-    totalEmployees: 0,
-    checkedInToday: 0,
-    currentlyWorking: 0,
-    lateToday: 0,
-    onLeaveToday: 0,
-    notPunchedYet: 0,
-  });
-
-  // Tab 2: Live Presence
-  const [currentlyInList, setCurrentlyInList] = useState<Attendance[]>([]);
+  const queryClient = useQueryClient();
 
   // Tab 1: Attendance Roster State
-  const [usersList, setUsersList] = useState<User[]>([]);
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
-  const [debouncedEmployeeSearch, setDebouncedEmployeeSearch] = useState<string>('');
+  const [debouncedEmployeeSearch, setDebouncedEmployeeSearch] =
+    useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [records, setRecords] = useState<Attendance[]>([]);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
-  const [meta, setMeta] = useState<PaginationMeta>({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
 
   // Debounce employee search (300ms)
   useEffect(() => {
@@ -79,44 +67,38 @@ export function useAdminDashboard() {
   const userModalDisclosure = useDisclosure();
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
-  // Load dashboard data from backend API
-  const loadAdminData = useCallback(async () => {
-    if (!token) return;
-    try {
-      const [pulseRes, liveRes, usersRes, attRes] = await Promise.all([
-        fetchDashboardMetrics(token).catch(() => null),
-        fetchCurrentlyIn(token).catch(() => []),
-        fetchUsers(token).catch(() => []),
-        fetchAttendances({
-          page,
-          limit,
-          status: statusFilter !== 'all' ? statusFilter : undefined,
-          employeeSearch: debouncedEmployeeSearch || undefined,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          token,
-        }),
-      ]);
+  // Each block loads, caches and fails independently
+  const metricsQuery = useDashboardMetrics();
+  const currentlyInQuery = useCurrentlyIn();
+  const usersQuery = useUsers();
+  const rosterQuery = useAttendanceRoster({
+    page,
+    limit,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    employeeSearch: debouncedEmployeeSearch || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
 
-      if (pulseRes) setPulse(pulseRes);
-      setCurrentlyInList(liveRes);
-      setUsersList(usersRes);
-      setRecords(attRes.data);
-      setMeta(attRes.meta);
+  const pulse = metricsQuery.data ?? EMPTY_PULSE;
+  const currentlyInList: Attendance[] = currentlyInQuery.data ?? [];
+  const usersList: User[] = useMemo(
+    () => usersQuery.data ?? [],
+    [usersQuery.data],
+  );
+  const records: Attendance[] = rosterQuery.data?.data ?? [];
+  const meta: PaginationMeta = rosterQuery.data?.meta ?? {
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 1,
+  };
 
-      setIsLiveApi(true);
-      setApiError(null);
-    } catch (err: any) {
-      setIsLiveApi(false);
-      setApiError(err?.message || 'Unable to connect to NestJS API');
-    } finally {
-      setAdminDataLoading(false);
-    }
-  }, [token, page, limit, statusFilter, debouncedEmployeeSearch, startDate, endDate]);
-
-  useEffect(() => {
-    loadAdminData();
-  }, [loadAdminData]);
+  // Refetch everything shown on the admin dashboard
+  const loadAdminData = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    [queryClient],
+  );
 
   // Filtered & paginated users for Tab 3
   const filteredUsers = useMemo(() => {
@@ -127,7 +109,8 @@ export function useAdminDashboard() {
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q);
       const matchesRole =
-        teamRoleFilter === 'all' || u.role.toLowerCase() === teamRoleFilter.toLowerCase();
+        teamRoleFilter === 'all' ||
+        u.role.toLowerCase() === teamRoleFilter.toLowerCase();
       return matchesSearch && matchesRole;
     });
   }, [usersList, teamSearchTerm, teamRoleFilter]);
@@ -192,7 +175,10 @@ export function useAdminDashboard() {
 
   const handleDeleteUser = async (id: string, name: string) => {
     if (!token) return;
-    if (!window.confirm(`Are you sure you want to deactivate ${name}'s account?`)) return;
+    if (
+      !window.confirm(`Are you sure you want to deactivate ${name}'s account?`)
+    )
+      return;
 
     try {
       await deleteUser(token, id);
@@ -239,15 +225,14 @@ export function useAdminDashboard() {
 
   return {
     token,
-    isLiveApi,
-    apiError,
-    adminDataLoading,
     loadAdminData,
     pulse,
+    pulseLoading: metricsQuery.isPending,
     // Tab 1 (Attendance Roster)
     roster: {
       records,
       meta,
+      loading: rosterQuery.isPending,
       employeeSearch,
       setEmployeeSearch,
       statusFilter,
