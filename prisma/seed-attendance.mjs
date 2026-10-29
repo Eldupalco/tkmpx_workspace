@@ -22,7 +22,8 @@ const DEFAULT_SHIFT = {
   shiftName: 'Standard Shift',
 };
 
-// Punches per day [amIn, amOut, pmIn, pmOut]; users rotate through these weekly plans
+// Punches per day [amIn, amOut, pmIn, pmOut]; users rotate through these weekly plans.
+// Thursday has no Afternoon Out (null), so every employee is still clocked in for testing the out punch.
 const ON_TIME = [
   ['08:55', '12:00', '12:57', '17:02'],
   ['08:58', '12:02', '12:56', '17:05'],
@@ -31,11 +32,11 @@ const ON_TIME = [
 ];
 const PLANS = [
   // Late Tuesday morning, late Thursday morning and afternoon
-  [ON_TIME[0], ['09:18', '12:00', '12:58', '17:01'], ON_TIME[2], ['09:07', '12:00', '13:15', '17:00']],
+  [ON_TIME[0], ['09:18', '12:00', '12:58', '17:01'], ON_TIME[2], ['09:07', '12:00', '13:15', null]],
   // Full present except a late Wednesday morning
-  [ON_TIME[1], ON_TIME[3], ['09:35', '12:00', '13:00', '17:00'], ON_TIME[0]],
+  [ON_TIME[1], ON_TIME[3], ['09:35', '12:00', '13:00', '17:00'], ['08:55', '12:00', '12:57', null]],
   // Late Monday morning and late back from lunch Thursday
-  [['09:25', '12:00', '12:59', '17:00'], ON_TIME[2], ON_TIME[1], ['08:55', '12:00', '13:40', '17:00']],
+  [['09:25', '12:00', '12:59', '17:00'], ON_TIME[2], ON_TIME[1], ['08:55', '12:00', '13:40', null]],
 ];
 
 /** Monday..Thursday (YYYY-MM-DD) of the current week, never in the future */
@@ -87,7 +88,7 @@ async function main() {
 
     const plan = PLANS[index % PLANS.length];
     for (const [dayIndex, date] of dates.entries()) {
-      const [amIn, amOut, pmIn, pmOut] = plan[dayIndex].map((time) => at(date, time));
+      const [amIn, amOut, pmIn, pmOut] = plan[dayIndex].map((time) => (time ? at(date, time) : null));
       const punches = { amIn, amOut, pmIn, pmOut };
       const shift = await prisma.schedules.findFirst({
         where: { userId: user.id, dayOfWeek: isoDayOfDate(date), isActive: true },
@@ -109,7 +110,7 @@ async function main() {
         },
       });
       console.log(
-        `   ${status === 'late' ? '⏰' : '✅'} ${user.email} ${date} ${plan[dayIndex].join(' / ')} → ${status}` +
+        `   ${status === 'late' ? '⏰' : '✅'} ${user.email} ${date} ${plan[dayIndex].map((t) => t ?? '—').join(' / ')} → ${status}` +
           (metrics.lateMinutes ? ` (${metrics.lateMinutes} min late)` : ''),
       );
     }
