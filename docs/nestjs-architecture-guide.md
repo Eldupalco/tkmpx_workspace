@@ -311,5 +311,5 @@ For this project, you can generate the entire MVC structure (`controllers`, `ser
 pnpm run gen:module <name>
 ```
 
-For the complete guide on customizing templates, script implementation, and deleting modules, see [MODULE_GENERATOR_GUIDE.md](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/MODULE_GENERATOR_GUIDE.md).
+For the complete guide on customizing templates, script implementation, and deleting modules, see the [Module Generator Guide](module-generator-guide.md).
 

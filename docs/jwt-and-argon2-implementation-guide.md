@@ -61,7 +61,7 @@ pnpm approve-builds --all
 ```
 
 ### Password Hashing (`argon2.hash`)
-Used during user registration ([`auth.service.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/src/auth/services/auth.service.ts)), user creation/update ([`users.service.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/src/users/services/users.service.ts)), and database seeding ([`seed.mjs`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/prisma/seed.mjs)):
+Used during user registration ([`auth.service.ts`](../src/auth/services/auth.service.ts)), user creation/update ([`users.service.ts`](../src/users/services/users.service.ts)), and database seeding ([`seed.mjs`](../prisma/seed.mjs)):
 
 ```typescript
 import * as argon2 from 'argon2';
@@ -71,7 +71,7 @@ const hashedPassword = await argon2.hash(plainTextPassword);
 ```
 
 ### Password Verification (`argon2.verify`)
-Used during login authentication ([`auth.service.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/src/auth/services/auth.service.ts)):
+Used during login authentication ([`auth.service.ts`](../src/auth/services/auth.service.ts)):
 
 ```typescript
 const isPasswordValid = await argon2.verify(user.password, dto.password);
@@ -81,7 +81,7 @@ if (!isPasswordValid) {
 ```
 
 ### Data Layer Protection (`userSelect`)
-To ensure that password hashes are **never returned to API clients**, queries and DTO responses utilize projection definitions ([`user.select.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/src/users/views/user.select.ts)):
+To ensure that password hashes are **never returned to API clients**, queries and DTO responses utilize projection definitions ([`user.select.ts`](../src/users/views/user.select.ts)):
 
 ```typescript
 export const userSelect = {
@@ -147,7 +147,7 @@ private async generateToken(userId: string, email: string, role: string) {
 
 ## 4. Route Protection (`JwtAuthGuard`)
 
-[`JwtAuthGuard`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/src/auth/guards/jwt-auth.guard.ts) implements NestJS's `CanActivate` interface:
+[`JwtAuthGuard`](../src/auth/guards/jwt-auth.guard.ts) implements NestJS's `CanActivate` interface:
 1. Extracts the token from the `Authorization: Bearer <token>` HTTP header.
 2. Throws `401 Unauthorized` if the header is missing or malformed.
 3. Verifies token integrity and expiration using `jwtService.verifyAsync()`.

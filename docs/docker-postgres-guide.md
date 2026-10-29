@@ -484,7 +484,7 @@ export class AttendancesController {
 ---
 
 > [!TIP]
-> For advanced MVC architectures, subfolder generators (`dto/`, `services/`, `controllers/`, `views/`), and the all-in-one resource generator, see [NESTJS_ARCHITECTURE_GUIDE.md](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/NESTJS_ARCHITECTURE_GUIDE.md).
+> For advanced MVC architectures, subfolder generators (`dto/`, `services/`, `controllers/`, `views/`), and the all-in-one resource generator, see the [NestJS Architecture Guide](nestjs-architecture-guide.md).
 
 
 

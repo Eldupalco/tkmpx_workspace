@@ -66,5 +66,5 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 
 ## 📚 Detailed Documentation for Beginners
 
-- 🚀 **[End-to-End Beginner Setup & Installation Guide (BEGINNER_SETUP_GUIDE.md)](../BEGINNER_SETUP_GUIDE.md)**: Complete step-by-step installation from Docker database to web login.
-- 🌐 **[Web API Architecture & Integration Guide (WEB_API_ARCHITECTURE_GUIDE.md)](../WEB_API_ARCHITECTURE_GUIDE.md)**: How Next.js pages authenticate and consume backend endpoints.
+- 🚀 **[End-to-End Beginner Setup & Installation Guide](../docs/beginner-setup-guide.md)**: Complete step-by-step installation from Docker database to web login.
+- 🌐 **[Web API Architecture & Integration Guide](../docs/web-api-architecture-guide.md)**: How Next.js pages authenticate and consume backend endpoints.

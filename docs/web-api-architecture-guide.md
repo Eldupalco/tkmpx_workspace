@@ -51,7 +51,7 @@ sequenceDiagram
 ## 2. Authentication & The Bearer Token
 
 ### Where does the token come from?
-1. The user logs in via [LoginForm.tsx](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/features/auth/components/LoginForm.tsx).
+1. The user logs in via [`LoginForm.tsx`](../web/features/auth/components/LoginForm.tsx).
 2. The backend responds with:
    ```json
    {
@@ -59,7 +59,7 @@ sequenceDiagram
      "user": { "id": "1", "name": "Admin", "role": "admin" }
    }
    ```
-3. The [AuthContext.tsx](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/features/auth/context/AuthContext.tsx) saves this token in two places:
+3. The [`AuthContext.tsx`](../web/features/auth/context/AuthContext.tsx) saves this token in two places:
    * **`localStorage.setItem('auth_token', token)`** (persists across page reloads).
    * **React State `token`** (accessible anywhere via the `useAuth()` hook).
 
@@ -81,7 +81,7 @@ export function MyComponent() {
 
 ## 3. The Shared API Client Helper
 
-Every API call shares a single configuration helper in [`web/lib/api-client.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/lib/api-client.ts):
+Every API call shares a single configuration helper in [`web/lib/api-client.ts`](../web/lib/api-client.ts):
 
 ```typescript
 // 1. Automatically uses NEXT_PUBLIC_API_URL or defaults to localhost:3000
@@ -106,7 +106,7 @@ export function getAuthHeaders(token?: string): Record<string, string> {
 ### Pattern 1: Page Load (Fetch on Mount)
 Used when a page opens and needs data immediately (e.g. Dashboard metrics, table records, schedules).
 
-**Location**: [`web/app/dashboard/page.tsx`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/app/dashboard/page.tsx#L90-L135) or [`web/app/admin/dashboard/page.tsx`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/app/admin/dashboard/page.tsx#L158-L195)
+**Location**: [`web/app/employee/dashboard/page.tsx`](../web/app/employee/dashboard/page.tsx#L90-L135) or [`web/app/admin/dashboard/page.tsx`](../web/app/admin/dashboard/page.tsx#L158-L195)
 
 ```typescript
 function EmployeeDashboardContent() {
@@ -150,7 +150,7 @@ function EmployeeDashboardContent() {
 ### Pattern 2: User Action / Mutation (Buttons & Forms)
 Used when the user performs an explicit action like clicking "Clock In", submitting a modal, or deleting an employee.
 
-**Example**: Punching Attendance ([`web/app/dashboard/page.tsx#L137-L167`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/app/dashboard/page.tsx#L137-L167))
+**Example**: Punching Attendance ([`web/app/employee/dashboard/page.tsx#L137-L167`](../web/app/employee/dashboard/page.tsx#L137-L167))
 
 ```typescript
 const [punchLoading, setPunchLoading] = useState(false);
@@ -194,7 +194,7 @@ const handleCheckIn = async () => {
 ### Pattern 3: Search & Filters (Debounced Query)
 Used in tables with search bars or dropdown filters (e.g. Company Roster, Date Range).
 
-**Example**: Employee Search ([`web/app/admin/dashboard/page.tsx#L98-L115`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/app/admin/dashboard/page.tsx#L98-L115))
+**Example**: Employee Search ([`web/app/admin/dashboard/page.tsx#L98-L115`](../web/app/admin/dashboard/page.tsx#L98-L115))
 
 ```typescript
 const [employeeSearch, setEmployeeSearch] = useState('');
@@ -227,7 +227,7 @@ const loadData = useCallback(async () => {
 ## 5. Complete API Directory by Feature
 
 ### 🔐 Auth Feature (`@/features/auth`)
-File: [`web/features/auth/api/auth.api.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/features/auth/api/auth.api.ts)
+File: [`web/features/auth/api/auth.api.ts`](../web/features/auth/api/auth.api.ts)
 
 | Function | Method & Endpoint | Description |
 | :--- | :--- | :--- |
@@ -239,7 +239,7 @@ File: [`web/features/auth/api/auth.api.ts`](file:///d:/Dev/T001KMPEX/nestjs-pris
 ---
 
 ### ⏱️ Attendance Feature (`@/features/attendance`)
-File: [`web/features/attendance/api/attendance.api.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/features/attendance/api/attendance.api.ts)
+File: [`web/features/attendance/api/attendance.api.ts`](../web/features/attendance/api/attendance.api.ts)
 
 | Function | Method & Endpoint | Description |
 | :--- | :--- | :--- |
@@ -254,7 +254,7 @@ File: [`web/features/attendance/api/attendance.api.ts`](file:///d:/Dev/T001KMPEX
 ---
 
 ### 📅 Schedule Feature (`@/features/schedule`)
-File: [`web/features/schedule/api/schedule.api.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/features/schedule/api/schedule.api.ts)
+File: [`web/features/schedule/api/schedule.api.ts`](../web/features/schedule/api/schedule.api.ts)
 
 | Function | Method & Endpoint | Description |
 | :--- | :--- | :--- |
@@ -265,7 +265,7 @@ File: [`web/features/schedule/api/schedule.api.ts`](file:///d:/Dev/T001KMPEX/nes
 ---
 
 ### 👥 Users & Workforce Feature (`@/features/users`)
-File: [`web/features/users/api/users.api.ts`](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/web/features/users/api/users.api.ts)
+File: [`web/features/users/api/users.api.ts`](../web/features/users/api/users.api.ts)
 
 | Function | Method & Endpoint | Description |
 | :--- | :--- | :--- |

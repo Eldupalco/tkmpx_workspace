@@ -51,7 +51,7 @@ flowchart TD
 
 ## Step 1: Start the PostgreSQL Database
 
-The project includes a ready-to-run [docker-compose.yml](file:///d:/Dev/T001KMPEX/nestjs-prisma-api/docker-compose.yml) in the root directory.
+The project includes a ready-to-run [docker-compose.yml](../docker-compose.yml) in the root directory.
 
 ### 1. Inspect `docker-compose.yml`:
 ```yaml
@@ -268,8 +268,8 @@ Open your web browser and go to:
 
 ## 📚 Related Documentation
 
-- 🌐 [Web API Architecture & Integration Guide](WEB_API_ARCHITECTURE_GUIDE.md)
-- ⚡ [NestJS Backend Architecture Guide](NESTJS_ARCHITECTURE_GUIDE.md)
-- 🐳 [Docker PostgreSQL Detailed Guide](DOCKER_POSTGRES_GUIDE.md)
-- 💾 [pnpm & exFAT Compatibility Guide](PNPM_EXFAT_GUIDE.md)
+- 🌐 [Web API Architecture & Integration Guide](web-api-architecture-guide.md)
+- ⚡ [NestJS Backend Architecture Guide](nestjs-architecture-guide.md)
+- 🐳 [Docker PostgreSQL Detailed Guide](docker-postgres-guide.md)
+- 💾 [pnpm & exFAT Compatibility Guide](pnpm-exfat-guide.md)
 
