@@ -27,6 +27,7 @@ import { ScheduleView, PaginatedScheduleView } from '../views/schedule.view.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
+import { resolveUserId } from '../../common/utils/request-user.util.js';
 
 @ApiTags('Schedules')
 @ApiBearerAuth()
@@ -41,8 +42,7 @@ export class SchedulesController {
   @ApiOperation({ summary: 'Display weekly shifts (Mon-Sun) for logged-in user' })
   @ApiResponse({ status: 200, description: 'Weekly shift roster with day names' })
   getMySchedule(@Request() req: any, @Query('userId') queryUserId?: string) {
-    const targetUserId =
-      req.user?.role === 'admin' && queryUserId ? queryUserId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, queryUserId);
     return this.schedulesService.getMySchedule(targetUserId);
   }
 
@@ -50,8 +50,7 @@ export class SchedulesController {
   @ApiOperation({ summary: 'Display shift hours for today' })
   @ApiResponse({ status: 200, description: "Today's expected shift" })
   getTodaySchedule(@Request() req: any, @Query('userId') queryUserId?: string) {
-    const targetUserId =
-      req.user?.role === 'admin' && queryUserId ? queryUserId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, queryUserId);
     return this.schedulesService.getTodaySchedule(targetUserId);
   }
 

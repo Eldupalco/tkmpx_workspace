@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationMetaView } from '../../common/utils/pagination.util.js';
 
 export class ScheduleUsersSummaryView {
   @ApiProperty({ example: 'Sample name' })
@@ -56,13 +57,6 @@ export class PaginatedScheduleView {
   @ApiProperty({ type: [ScheduleView] })
   data: ScheduleView[];
 
-  @ApiProperty({
-    example: { total: 42, page: 1, limit: 10, totalPages: 5 },
-  })
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  @ApiProperty({ type: PaginationMetaView })
+  meta: PaginationMetaView;
 }

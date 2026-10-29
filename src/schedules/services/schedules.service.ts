@@ -12,6 +12,7 @@ import { BulkScheduleDto, BulkUsersScheduleDto } from '../dto/bulk-schedule.dto.
 import { scheduleSelect } from '../views/schedule.select.js';
 import { isoDayOfWeek } from '../../common/utils/date.util.js';
 import { randomUUID } from 'node:crypto';
+import { paginated } from '../../common/utils/pagination.util.js';
 
 const DAY_NAMES = [
   '',
@@ -117,15 +118,7 @@ export class SchedulesService {
       }),
     ]);
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+    return paginated(data, total, page, limit);
   }
 
   async findOne(id: string) {

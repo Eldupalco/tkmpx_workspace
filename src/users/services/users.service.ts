@@ -10,6 +10,7 @@ import { QueryUserDto } from '../dto/query-user.dto.js';
 import { userSelect } from '../views/user.select.js';
 import { randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
+import { paginated } from '../../common/utils/pagination.util.js';
 
 @Injectable()
 export class UsersService {
@@ -70,15 +71,7 @@ export class UsersService {
       }),
     ]);
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+    return paginated(data, total, page, limit);
   }
 
   async findOne(id: string) {

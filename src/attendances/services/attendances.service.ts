@@ -30,6 +30,7 @@ import {
   punchStatus,
 } from './punch.rules.js';
 import { randomUUID } from 'node:crypto';
+import { paginated } from '../../common/utils/pagination.util.js';
 
 const notOnLeave = { status: { notIn: LEAVE_STATUSES } };
 const STANDARD_HOURS = 8;
@@ -177,15 +178,7 @@ export class AttendancesService {
       }),
     ]);
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+    return paginated(data, total, page, limit);
   }
 
   async findOne(id: string) {

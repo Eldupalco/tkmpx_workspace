@@ -37,6 +37,7 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
+import { resolveUserId } from '../../common/utils/request-user.util.js';
 
 @ApiTags('Attendances')
 @ApiBearerAuth()
@@ -51,8 +52,7 @@ export class AttendancesController {
   @ApiOperation({ summary: 'Inspect punch state for today' })
   @ApiResponse({ status: 200, description: 'Current punch status for today' })
   getTodayStatus(@Request() req: any, @Query('userId') queryUserId?: string) {
-    const targetUserId =
-      req.user?.role === 'admin' && queryUserId ? queryUserId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, queryUserId);
     return this.attendancesService.getTodayStatus(targetUserId);
   }
 
@@ -76,8 +76,7 @@ export class AttendancesController {
   @ApiOperation({ summary: 'Get attendance summary statistics' })
   @ApiResponse({ status: 200, description: 'Attendance counts' })
   getSummary(@Request() req: any, @Query('userId') queryUserId?: string) {
-    const targetUserId =
-      req.user?.role === 'admin' ? queryUserId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, queryUserId, { allowAll: true });
     return this.attendancesService.getSummary(targetUserId);
   }
 
@@ -85,8 +84,7 @@ export class AttendancesController {
   @ApiOperation({ summary: 'Calculated timesheet with hours worked & overtime' })
   @ApiResponse({ status: 200, description: 'Timesheet calculation' })
   getTimesheet(@Request() req: any, @Query() query: TimesheetQueryDto) {
-    const targetUserId =
-      req.user?.role === 'admin' && query.userId ? query.userId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, query.userId);
     return this.attendancesService.getTimesheet(
       targetUserId,
       query.startDate,
@@ -103,8 +101,7 @@ export class AttendancesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const targetUserId =
-      req.user?.role === 'admin' ? queryUserId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, queryUserId, { allowAll: true });
     const csvContent = await this.attendancesService.exportCsv(
       targetUserId,
       startDate,
@@ -125,8 +122,7 @@ export class AttendancesController {
   @ApiResponse({ status: 400, description: 'On leave, or all four punches already recorded' })
   @ApiResponse({ status: 409, description: 'Same punch submitted twice at once' })
   performPunch(@Request() req: any, @Body() dto: PunchActionDto) {
-    const targetUserId =
-      req.user?.role === 'admin' && dto.userId ? dto.userId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, dto.userId);
     return this.attendancesService.performPunch(targetUserId, dto.notes);
   }
 
@@ -134,8 +130,7 @@ export class AttendancesController {
   @ApiOperation({ summary: 'Register employee leave or vacation' })
   @ApiResponse({ status: 201, description: 'Leave recorded' })
   recordLeave(@Request() req: any, @Body() dto: LeaveActionDto) {
-    const targetUserId =
-      req.user?.role === 'admin' && dto.userId ? dto.userId : req.user.sub;
+    const targetUserId = resolveUserId(req.user, dto.userId);
     return this.attendancesService.recordLeave(
       targetUserId,
       dto.date,
