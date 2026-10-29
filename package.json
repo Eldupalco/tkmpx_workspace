@@ -13,6 +13,7 @@
     "gen:module": "node scripts/generate-module.mjs",
     "gen:verify": "node scripts/verify-generator.mjs",
     "seed": "node prisma/seed.mjs",
+    "seed:attendance": "node prisma/seed-attendance.mjs",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:web": "pnpm --filter web dev",
