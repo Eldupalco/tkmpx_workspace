@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiFetch, getAuthHeaders } from '@/lib/api-client';
+import { apiRequest } from '@/lib/api-client';
 import { User } from '@/features/auth/types';
 import { Attendance } from '@/features/attendance/types';
 import {
@@ -7,83 +7,31 @@ import {
   DashboardMetrics,
 } from '../types';
 
-export async function fetchUsers(token?: string): Promise<User[]> {
-  try {
-    const res = await apiFetch(`${API_BASE_URL}/users?limit=50`, {
-      headers: getAuthHeaders(token),
-      cache: 'no-store',
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json?.data || [];
-  } catch (error) {
-    console.warn('API: fetchUsers failed', error);
-    return [];
-  }
+export async function fetchUsers(token: string): Promise<User[]> {
+  const data = await apiRequest<User[]>('/users?limit=50', { token, errorMessage: 'Failed to fetch users' });
+  return data ?? [];
 }
 
-export async function createUser(
-  token: string,
-  data: CreateUserPayload
-): Promise<User> {
-  const res = await apiFetch(`${API_BASE_URL}/users`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Failed to create user');
-  }
-  const json = await res.json();
-  return json.data || json;
+export function createUser(token: string, data: CreateUserPayload): Promise<User> {
+  return apiRequest('/users', { method: 'POST', token, body: data, errorMessage: 'Failed to create user' });
 }
 
-export async function updateUser(
-  token: string,
-  id: string,
-  data: UpdateUserPayload
-): Promise<User> {
-  const res = await apiFetch(`${API_BASE_URL}/users/${id}`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Failed to update user');
-  }
-  const json = await res.json();
-  return json.data || json;
+export function updateUser(token: string, id: string, data: UpdateUserPayload): Promise<User> {
+  return apiRequest(`/users/${id}`, { method: 'PATCH', token, body: data, errorMessage: 'Failed to update user' });
 }
 
 export async function deleteUser(token: string, id: string): Promise<void> {
-  const res = await apiFetch(`${API_BASE_URL}/users/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(token),
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Failed to delete user');
-  }
+  await apiRequest(`/users/${id}`, { method: 'DELETE', token, errorMessage: 'Failed to delete user' });
 }
 
 export async function fetchCurrentlyIn(token: string): Promise<Attendance[]> {
-  const res = await apiFetch(`${API_BASE_URL}/attendances/currently-in`, {
-    headers: getAuthHeaders(token),
-    cache: 'no-store',
+  const data = await apiRequest<Attendance[]>('/attendances/currently-in', {
+    token,
+    errorMessage: 'Failed to fetch currently-in records',
   });
-  if (!res.ok) throw new Error('Failed to fetch currently-in records');
-  const json = await res.json();
-  return json.data || [];
+  return data ?? [];
 }
 
-export async function fetchDashboardMetrics(token: string): Promise<DashboardMetrics> {
-  const res = await apiFetch(`${API_BASE_URL}/attendances/dashboard`, {
-    headers: getAuthHeaders(token),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to fetch dashboard metrics');
-  const json = await res.json();
-  return json.data;
+export function fetchDashboardMetrics(token: string): Promise<DashboardMetrics> {
+  return apiRequest('/attendances/dashboard', { token, errorMessage: 'Failed to fetch dashboard metrics' });
 }

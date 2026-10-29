@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiFetch, getAuthHeaders } from '@/lib/api-client';
+import { API_BASE_URL, apiFetch, apiRequest, apiRequestPage, getAuthHeaders } from '@/lib/api-client';
 import {
   Attendance,
   PaginatedResponse,
@@ -7,7 +7,7 @@ import {
   TodayPunchStatus,
 } from '../types';
 
-export async function fetchAttendances({
+export function fetchAttendances({
   page = 1,
   limit = 5,
   search = '',
@@ -32,54 +32,26 @@ export async function fetchAttendances({
   if (startDate && startDate.trim()) queryParams.set('startDate', startDate.trim());
   if (endDate && endDate.trim()) queryParams.set('endDate', endDate.trim());
 
-  const res = await apiFetch(`${API_BASE_URL}/attendances?${queryParams.toString()}`, {
-    headers: getAuthHeaders(token),
-    cache: 'no-store',
+  return apiRequestPage(`/attendances?${queryParams.toString()}`, {
+    token,
+    errorMessage: 'Failed to fetch attendances',
   });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to fetch attendances: ${res.status} ${errorText}`);
-  }
-
-  const json = await res.json();
-  if (json && json.data) {
-    const data = Array.isArray(json.data) ? json.data : [];
-    const meta = json.meta || {
-      total: data.length,
-      page,
-      limit,
-      totalPages: Math.ceil(data.length / limit) || 1,
-    };
-    return { data, meta };
-  }
-
-  return { data: [], meta: { total: 0, page: 1, limit, totalPages: 1 } };
 }
 
-export async function fetchTodayStatus(token: string, userId?: string): Promise<TodayPunchStatus> {
+export function fetchTodayStatus(token: string, userId?: string): Promise<TodayPunchStatus> {
   const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-  const res = await apiFetch(`${API_BASE_URL}/attendances/today-status${query}`, {
-    headers: getAuthHeaders(token),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to fetch today status');
-  const json = await res.json();
-  return json.data;
+  return apiRequest(`/attendances/today-status${query}`, { token, errorMessage: 'Failed to fetch today status' });
 }
 
-export async function fetchAttendanceSummary(token: string, userId?: string) {
+export function fetchAttendanceSummary(token: string, userId?: string) {
   const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-  const res = await apiFetch(`${API_BASE_URL}/attendances/summary${query}`, {
-    headers: getAuthHeaders(token),
-    cache: 'no-store',
+  return apiRequest<any>(`/attendances/summary${query}`, {
+    token,
+    errorMessage: 'Failed to fetch attendance summary',
   });
-  if (!res.ok) throw new Error('Failed to fetch attendance summary');
-  const json = await res.json();
-  return json.data;
 }
 
-export async function fetchTimesheet(
+export function fetchTimesheet(
   token: string,
   params?: { startDate?: string; endDate?: string; userId?: string }
 ): Promise<TimesheetData> {
@@ -88,46 +60,33 @@ export async function fetchTimesheet(
   if (params?.endDate) query.set('endDate', params.endDate);
   if (params?.userId) query.set('userId', params.userId);
 
-  const res = await apiFetch(`${API_BASE_URL}/attendances/timesheet?${query.toString()}`, {
-    headers: getAuthHeaders(token),
-    cache: 'no-store',
+  return apiRequest(`/attendances/timesheet?${query.toString()}`, {
+    token,
+    errorMessage: 'Failed to fetch timesheet',
   });
-  if (!res.ok) throw new Error('Failed to fetch timesheet');
-  const json = await res.json();
-  return json.data;
 }
 
 /** Records the next punch of the day: Morning In, Morning Out, Afternoon In, Afternoon Out */
-export async function postPunch(token: string, notes?: string, userId?: string): Promise<Attendance> {
-  const res = await apiFetch(`${API_BASE_URL}/attendances/punch`, {
+export function postPunch(token: string, notes?: string, userId?: string): Promise<Attendance> {
+  return apiRequest('/attendances/punch', {
     method: 'POST',
-    headers: getAuthHeaders(token),
+    token,
     // userId is honoured only for admins (punch on behalf of an employee)
-    body: JSON.stringify({ ...(notes ? { notes } : {}), ...(userId ? { userId } : {}) }),
+    body: { ...(notes ? { notes } : {}), ...(userId ? { userId } : {}) },
+    errorMessage: 'Punch failed',
   });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Punch failed');
-  }
-  const json = await res.json();
-  return json.data;
 }
 
-export async function postLeaveRequest(
+export function postLeaveRequest(
   token: string,
   data: { date: string; status?: string; notes?: string; userId?: string }
 ) {
-  const res = await apiFetch(`${API_BASE_URL}/attendances/leave`, {
+  return apiRequest('/attendances/leave', {
     method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
+    token,
+    body: data,
+    errorMessage: 'Leave registration failed',
   });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Leave registration failed');
-  }
-  const json = await res.json();
-  return json.data;
 }
 
 export function downloadAttendanceCsv(
@@ -145,6 +104,7 @@ export function downloadAttendanceCsv(
   const qs = query.toString() ? `?${query.toString()}` : '';
   const url = `${API_BASE_URL}/attendances/export${qs}`;
 
+  // CSV is a file download, not a JSON envelope, so it uses apiFetch directly
   apiFetch(url, { headers: getAuthHeaders(token) })
     .then((res) => res.blob())
     .then((blob) => {
@@ -159,4 +119,3 @@ export function downloadAttendanceCsv(
     })
     .catch((err) => console.error('CSV download error', err));
 }
-

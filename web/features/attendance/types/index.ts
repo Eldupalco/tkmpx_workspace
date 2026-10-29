@@ -25,12 +25,8 @@ export interface Attendance extends DailyPunches {
   schedules?: { shiftName?: string | null; dayOfWeek: number; breakStart: string | null } | null;
 }
 
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+import type { PaginationMeta } from '@/lib/api-client';
+export type { PaginationMeta };
 
 export interface PaginatedResponse<T> {
   data: T[];
