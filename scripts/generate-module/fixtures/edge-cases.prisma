@@ -1,0 +1,42 @@
+// Appended to a scratch copy of prisma/schema.prisma by scripts/verify-generator.mjs
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// PascalCase name, uuid() default id, sensitive field, @updatedAt
+model Project {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  clientSecret String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tickets      Ticket[]
+}
+
+// Int autoincrement id, enums, Json with "{}" default, BigInt, Decimal, lists, Bytes
+model Ticket {
+  id         Int              @id @default(autoincrement())
+  title      String
+  priority   TicketPriority   @default(MEDIUM)
+  labels     TicketPriority[]
+  isArchived Boolean          @default(false)
+  meta       Json             @default("{}")
+  views      BigInt           @default(0)
+  price      Decimal?
+  tags       String[]
+  attachment Bytes?
+  dueAt      DateTime?
+  projectId  String
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+}
+
+// Int id without default (client supplied), updatedAt without @updatedAt
+model AuditLog {
+  code      Int      @id
+  message   String
+  updatedAt DateTime
+}
