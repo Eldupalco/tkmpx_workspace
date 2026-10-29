@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { User, LoginCredentials } from '../types';
 import { loginUser, fetchUserProfile } from '../api/auth.api';
 import { setUnauthorizedHandler } from '@/lib/api-client';
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -92,8 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    // Drop cached API data so the next user never sees the previous user's records
+    queryClient.clear();
     router.replace('/login');
-  }, [router]);
+  }, [router, queryClient]);
 
   // Any API call rejected with 401 (expired or invalid token) ends the session
   useEffect(() => {

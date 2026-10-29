@@ -28,12 +28,13 @@ function EmployeeDashboardContent() {
     token,
     isLiveApi,
     apiError,
-    dataLoading,
     loadAllData,
     punch,
     summary,
+    summaryLoading,
     myShifts,
     todayShift,
+    scheduleLoading,
     history,
     timesheetDisclosure,
     timesheetData,
@@ -50,13 +51,15 @@ function EmployeeDashboardContent() {
       <Container maxW="1200px" py={8}>
         <VStack spacing={6} align="stretch">
           {/* API Connection Warning */}
-          {!isLiveApi && (
-            <Alert status="warning" borderRadius="xl" shadow="xs" border="1px solid" borderColor="amber.200">
+          {apiError && (
+            <Alert status="warning" borderRadius="xl" shadow="xs" border="1px solid"  borderColor="amber.200">
               <AlertIcon />
               <Box flex="1">
-                <AlertTitle fontSize="sm">API Connection Notice</AlertTitle>
+                <AlertTitle fontSize="sm">
+                  {isLiveApi ? 'Some data could not be loaded' : 'API Connection Notice'}
+                </AlertTitle>
                 <AlertDescription fontSize="xs">
-                  {apiError || 'NestJS backend is unreachable.'}
+                  {isLiveApi ? apiError : 'NestJS backend is unreachable.'}
                 </AlertDescription>
               </Box>
               <Button size="xs" colorScheme="orange" onClick={loadAllData}>
@@ -83,20 +86,20 @@ function EmployeeDashboardContent() {
           />
 
           {/* 3. Metric Summary Cards */}
-          <EmployeeSummaryCards summary={summary} loading={dataLoading} />
+          <EmployeeSummaryCards summary={summary} loading={summaryLoading} />
 
           {/* 4. Weekly Schedule Card */}
           <ScheduleSection
             shifts={myShifts}
             todayShift={todayShift}
-            loading={dataLoading}
+            loading={scheduleLoading}
           />
 
           {/* 5. Personal Punch History & Filters */}
           <PunchHistorySection
             records={history.records}
             meta={history.meta}
-            loading={dataLoading}
+            loading={history.loading}
             searchTerm={history.searchTerm}
             setSearchTerm={history.setSearchTerm}
             statusFilter={history.statusFilter}

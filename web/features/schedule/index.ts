@@ -1,5 +1,6 @@
 export * from './types';
 export * from './api/schedule.api';
+export * from './hooks/schedule.queries';
 export * from './utils/format';
 export * from './components/ScheduleCard';
 export * from './components/BulkScheduleModal';

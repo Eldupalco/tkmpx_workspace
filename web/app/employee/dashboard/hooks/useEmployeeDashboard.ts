@@ -2,56 +2,40 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast, useDisclosure } from '@chakra-ui/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
 import {
-  fetchAttendances,
-  fetchTodayStatus,
-  postPunch,
-  fetchAttendanceSummary,
-  fetchTimesheet,
+  attendanceKeys,
   downloadAttendanceCsv,
-  Attendance,
+  useAttendanceHistory,
+  useAttendanceSummary,
+  usePunch,
+  useTimesheet,
+  useTodayStatus,
+  AttendanceSummary,
   PaginationMeta,
-  TimesheetData,
-  TodayPunchStatus,
 } from '@/features/attendance';
-import {
-  fetchMySchedule,
-  fetchTodaySchedule,
-  ShiftSchedule,
-  TodaySchedule,
-} from '@/features/schedule';
+import { scheduleKeys, useMySchedule, useTodaySchedule } from '@/features/schedule';
+
+const EMPTY_SUMMARY: AttendanceSummary = {
+  total: 0,
+  present: 0,
+  late: 0,
+  halfDay: 0,
+  absent: 0,
+  onLeave: 0,
+};
 
 export function useEmployeeDashboard() {
+
   const { user, token } = useAuth();
   const toast = useToast();
+  const queryClient = useQueryClient();
 
-  // API connection & loading
-  const [isLiveApi, setIsLiveApi] = useState<boolean>(true);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [dataLoading, setDataLoading] = useState<boolean>(true);
-
-  // Today Punch Status State
-  const [todayStatus, setTodayStatus] = useState<TodayPunchStatus | null>(null);
+  // Punch notes
   const [notes, setNotes] = useState<string>('');
-  const [actionLoading, setActionLoading] = useState<boolean>(false);
-
-  // Summary Metrics
-  const [summary, setSummary] = useState<{
-    total: number;
-    present: number;
-    late: number;
-    halfDay: number;
-    absent: number;
-    onLeave: number;
-  }>({ total: 0, present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 });
-
-  // Weekly Schedules
-  const [myShifts, setMyShifts] = useState<ShiftSchedule[]>([]);
-  const [todayShift, setTodayShift] = useState<TodaySchedule | null>(null);
 
   // Punch History Filters & Pagination
-  const [records, setRecords] = useState<Attendance[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -59,12 +43,6 @@ export function useEmployeeDashboard() {
   const [endDate, setEndDate] = useState<string>('');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(5);
-  const [meta, setMeta] = useState<PaginationMeta>({
-    total: 0,
-    page: 1,
-    limit: 5,
-    totalPages: 1,
-  });
 
   // Debounce search (300ms)
   useEffect(() => {
@@ -77,61 +55,43 @@ export function useEmployeeDashboard() {
 
   // Modals state
   const timesheetDisclosure = useDisclosure();
-  const [timesheetData, setTimesheetData] = useState<TimesheetData | null>(null);
-  const [timesheetLoading, setTimesheetLoading] = useState(false);
   const leaveDisclosure = useDisclosure();
 
-  // Fetch all employee dashboard data
-  const loadAllData = useCallback(async () => {
-    if (!token || !user) return;
-    try {
-      const statusRes = await fetchTodayStatus(token);
-      setTodayStatus(statusRes ?? null);
+  // Each section loads, caches and fails independently
+  const todayStatusQuery = useTodayStatus();
+  const summaryQuery = useAttendanceSummary();
+  const myShiftsQuery = useMySchedule();
+  const todayShiftQuery = useTodaySchedule();
+  const historyQuery = useAttendanceHistory({
+    page,
+    limit,
+    search: debouncedSearch || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+  const timesheetQuery = useTimesheet(timesheetDisclosure.isOpen);
+  const punchMutation = usePunch();
 
-      const sumRes = await fetchAttendanceSummary(token);
-      if (sumRes) setSummary(sumRes);
+  const queries = [todayStatusQuery, summaryQuery, myShiftsQuery, todayShiftQuery, historyQuery];
+  const failed = queries.filter((q) => q.isError);
+  // Backend counts as unreachable only when every section failed
+  const isLiveApi = failed.length < queries.length;
+  const apiError = failed[0]?.error?.message ?? null;
 
-      const [shifts, tShift] = await Promise.all([
-        fetchMySchedule(token).catch(() => []),
-        fetchTodaySchedule(token).catch(() => null),
-      ]);
-      setMyShifts(shifts);
-      setTodayShift(tShift);
-
-      const attRes = await fetchAttendances({
-        page,
-        limit,
-        userId: user.id,
-        search: debouncedSearch || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        token,
-      });
-      setRecords(attRes.data);
-      setMeta(attRes.meta);
-
-      setIsLiveApi(true);
-      setApiError(null);
-    } catch (err: any) {
-      setIsLiveApi(false);
-      setApiError(err?.message || 'Unable to connect to NestJS API');
-    } finally {
-      setDataLoading(false);
-    }
-  }, [token, user, page, limit, debouncedSearch, statusFilter, startDate, endDate]);
-
-  useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+  // Refetch everything shown on the dashboard
+  const loadAllData = useCallback(() => {
+    if (!user) return;
+    queryClient.invalidateQueries({ queryKey: attendanceKeys.all(user.id) });
+    queryClient.invalidateQueries({ queryKey: scheduleKeys.all(user.id) });
+  }, [queryClient, user]);
 
   // Records the next punch in sequence: Morning In -> Morning Out -> Afternoon In -> Afternoon Out
   const handlePunch = async () => {
     if (!token) return;
-    const label = todayStatus?.nextPunchLabel ?? 'Punch';
-    setActionLoading(true);
+    const label = todayStatusQuery.data?.nextPunchLabel ?? 'Punch';
     try {
-      await postPunch(token, notes || undefined);
+      await punchMutation.mutateAsync(notes || undefined);
       toast({
         title: `${label} Recorded`,
         description: `Punched at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
@@ -140,7 +100,6 @@ export function useEmployeeDashboard() {
         isClosable: true,
       });
       setNotes('');
-      await loadAllData();
     } catch (err: any) {
       toast({
         title: `${label} Failed`,
@@ -149,29 +108,25 @@ export function useEmployeeDashboard() {
         duration: 4000,
         isClosable: true,
       });
-    } finally {
-      setActionLoading(false);
     }
   };
 
-  // Open Timesheet Modal & Load Timesheet API
-  const handleOpenTimesheet = async () => {
-    if (!token) return;
-    timesheetDisclosure.onOpen();
-    setTimesheetLoading(true);
-    try {
-      const data = await fetchTimesheet(token);
-      setTimesheetData(data);
-    } catch (err: any) {
+  // Timesheet errors surface as a toast; the modal itself only shows loading/data
+  useEffect(() => {
+    if (timesheetQuery.isError) {
       toast({
         title: 'Failed to load timesheet',
-        description: err.message,
+        description: timesheetQuery.error.message,
         status: 'error',
         duration: 3000,
       });
-    } finally {
-      setTimesheetLoading(false);
     }
+  }, [timesheetQuery.isError, timesheetQuery.error, toast]);
+
+  // Open Timesheet Modal; the query starts once the modal is open
+  const handleOpenTimesheet = () => {
+    if (!token) return;
+    timesheetDisclosure.onOpen();
   };
 
   // Export CSV
@@ -193,30 +148,34 @@ export function useEmployeeDashboard() {
     setPage(1);
   };
 
+  const meta: PaginationMeta = historyQuery.data?.meta ?? { total: 0, page: 1, limit, totalPages: 1 };
+
   return {
     user,
     token,
     isLiveApi,
     apiError,
-    dataLoading,
     loadAllData,
     // Terminal Punch
     punch: {
-      status: todayStatus,
-      actionLoading,
+      status: todayStatusQuery.data ?? null,
+      actionLoading: punchMutation.isPending,
       notes,
       setNotes,
       onPunch: handlePunch,
     },
     // Metrics
-    summary,
+    summary: summaryQuery.data ?? EMPTY_SUMMARY,
+    summaryLoading: summaryQuery.isPending,
     // Schedules
-    myShifts,
-    todayShift,
+    myShifts: myShiftsQuery.data ?? [],
+    todayShift: todayShiftQuery.data ?? null,
+    scheduleLoading: myShiftsQuery.isPending || todayShiftQuery.isPending,
     // History
     history: {
-      records,
+      records: historyQuery.data?.data ?? [],
       meta,
+      loading: historyQuery.isPending,
       searchTerm,
       setSearchTerm,
       statusFilter,
@@ -233,8 +192,8 @@ export function useEmployeeDashboard() {
     },
     // Modals
     timesheetDisclosure,
-    timesheetData,
-    timesheetLoading,
+    timesheetData: timesheetQuery.data ?? null,
+    timesheetLoading: timesheetQuery.isPending,
     leaveDisclosure,
     handleOpenTimesheet,
     handleExportCsv,

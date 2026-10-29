@@ -33,6 +33,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ isLiveApi = true }: NavbarProps) {
+
   const { user, token, logout, updateUser } = useAuth();
   const pathname = usePathname();
   const { isOpen, onOpen, onClose } = useDisclosure();

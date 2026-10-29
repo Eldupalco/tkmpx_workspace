@@ -1,5 +1,6 @@
 export * from './types';
 export * from './api/attendance.api';
+export * from './hooks/attendance.queries';
 export * from './components/AttendanceTable';
 export * from './components/PunchButton';
 export * from './components/TimesheetModal';
