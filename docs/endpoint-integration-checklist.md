@@ -8,10 +8,10 @@ This checklist tracks the end-to-end integration status between the **NestJS Bac
 
 | Endpoint | Method | Role | Backend | Web API (`api.ts`) | UI Component / Workflow | Status |
 | :--- | :--- | :--- | :---: | :---: | :--- | :---: |
-| `/auth/login` | `POST` | Public | [x] | [x] | [`LoginForm.tsx`](../web/components/LoginForm.tsx) | **Fully Integrated** |
-| `/auth/profile` | `GET` | Auth | [x] | [x] | [`AuthContext.tsx`](../web/context/AuthContext.tsx) (Session restore) | **Fully Integrated** |
-| `/auth/profile` | `PATCH` | Auth | [x] | [x] | [`ProfileModal.tsx`](../web/components/ProfileModal.tsx) | **Fully Integrated** |
-| `/auth/change-password` | `POST` | Auth | [x] | [x] | [`ProfileModal.tsx`](../web/components/ProfileModal.tsx) | **Fully Integrated** |
+| `/auth/login` | `POST` | Public | [x] | [x] | [`LoginForm.tsx`](../web/features/auth/components/LoginForm.tsx) | **Fully Integrated** |
+| `/auth/profile` | `GET` | Auth | [x] | [x] | [`AuthContext.tsx`](../web/features/auth/context/AuthContext.tsx) (Session restore) | **Fully Integrated** |
+| `/auth/profile` | `PATCH` | Auth | [x] | [x] | [`ProfileModal.tsx`](../web/features/users/components/ProfileModal.tsx) | **Fully Integrated** |
+| `/auth/change-password` | `POST` | Auth | [x] | [x] | [`ProfileModal.tsx`](../web/features/users/components/ProfileModal.tsx) | **Fully Integrated** |
 | `/auth/forgot-password` | `POST` | Public | [x] | [ ] | Forgot Password Modal | *Pending UI* |
 | `/auth/reset-password` | `POST` | Public | [x] | [ ] | Reset Password Page/Modal | *Pending UI* |
 | `/auth/register` | `POST` | Public | [x] | [ ] | Public Self-Registration | *Pending UI / Optional* |
@@ -23,9 +23,9 @@ This checklist tracks the end-to-end integration status between the **NestJS Bac
 | Endpoint | Method | Role | Backend | Web API (`api.ts`) | UI Component / Workflow | Status |
 | :--- | :--- | :--- | :---: | :---: | :--- | :---: |
 | `/users` | `GET` | Admin | [x] | [x] | [`admin/dashboard/page.tsx`](../web/app/admin/dashboard/page.tsx) (Filter & Team Roster) | **Fully Integrated** |
-| `/users` | `POST` | Admin | [x] | [x] | [`UserModal.tsx`](../web/components/UserModal.tsx) (`createUser`) | **Fully Integrated** |
+| `/users` | `POST` | Admin | [x] | [x] | [`UserModal.tsx`](../web/features/users/components/UserModal.tsx) (`createUser`) | **Fully Integrated** |
 | `/users/:id` | `GET` | Admin | [x] | [x] | Loaded in `usersList` cache | **Fully Integrated** |
-| `/users/:id` | `PATCH` | Admin | [x] | [x] | [`UserModal.tsx`](../web/components/UserModal.tsx) (`updateUser`) | **Fully Integrated** |
+| `/users/:id` | `PATCH` | Admin | [x] | [x] | [`UserModal.tsx`](../web/features/users/components/UserModal.tsx) (`updateUser`) | **Fully Integrated** |
 | `/users/:id` | `DELETE` | Admin | [x] | [x] | [`admin/dashboard/page.tsx`](../web/app/admin/dashboard/page.tsx) (`deleteUser`) | **Fully Integrated** |
 
 ---
@@ -34,16 +34,16 @@ This checklist tracks the end-to-end integration status between the **NestJS Bac
 
 | Endpoint | Method | Role | Backend | Web API (`api.ts`) | UI Component / Workflow | Status |
 | :--- | :--- | :--- | :---: | :---: | :--- | :---: |
-| `/attendances` | `GET` | Auth/Admin | [x] | [x] | Both Dashboards ([`AttendanceTable.tsx`](../web/components/AttendanceTable.tsx)) | **Fully Integrated** |
+| `/attendances` | `GET` | Auth/Admin | [x] | [x] | Both Dashboards ([`AttendanceTable.tsx`](../web/features/attendance/components/AttendanceTable.tsx)) | **Fully Integrated** |
 | `/attendances/today-status` | `GET` | Auth/Admin | [x] | [x] | [`employee/dashboard/page.tsx`](../web/app/employee/dashboard/page.tsx) ([`CheckInButton.tsx`](../web/components/CheckInButton.tsx)) | **Fully Integrated** |
-| `/attendances/currently-in` | `GET` | Admin | [x] | [x] | [`LivePresenceCard.tsx`](../web/components/LivePresenceCard.tsx) | **Fully Integrated** |
+| `/attendances/currently-in` | `GET` | Admin | [x] | [x] | [`LivePresenceCard.tsx`](../web/features/users/components/LivePresenceCard.tsx) | **Fully Integrated** |
 | `/attendances/dashboard` | `GET` | Admin | [x] | [x] | [`admin/dashboard/page.tsx`](../web/app/admin/dashboard/page.tsx) (6 Pulse KPIs) | **Fully Integrated** |
 | `/attendances/summary` | `GET` | Auth/Admin | [x] | [x] | [`employee/dashboard/page.tsx`](../web/app/employee/dashboard/page.tsx) (4 Employee KPIs) | **Fully Integrated** |
-| `/attendances/timesheet` | `GET` | Auth/Admin | [x] | [x] | [`TimesheetModal.tsx`](../web/components/TimesheetModal.tsx) | **Fully Integrated** |
+| `/attendances/timesheet` | `GET` | Auth/Admin | [x] | [x] | [`TimesheetModal.tsx`](../web/features/attendance/components/TimesheetModal.tsx) | **Fully Integrated** |
 | `/attendances/export` | `GET` | Auth/Admin | [x] | [x] | Both Dashboards (`downloadAttendanceCsv`) | **Fully Integrated** |
 | `/attendances/check-in` | `POST` | Auth/Admin | [x] | [x] | [`CheckInButton.tsx`](../web/components/CheckInButton.tsx) | **Fully Integrated** |
 | `/attendances/:id/check-out`| `POST` | Auth/Admin | [x] | [x] | [`CheckInButton.tsx`](../web/components/CheckInButton.tsx) & Manager Override | **Fully Integrated** |
-| `/attendances/leave` | `POST` | Auth/Admin | [x] | [x] | [`LeaveRequestModal.tsx`](../web/components/LeaveRequestModal.tsx) | **Fully Integrated** |
+| `/attendances/leave` | `POST` | Auth/Admin | [x] | [x] | [`LeaveRequestModal.tsx`](../web/features/attendance/components/LeaveRequestModal.tsx) | **Fully Integrated** |
 | `/attendances` | `POST` | Auth/Admin | [x] | [ ] | Manual Backfill Punch Modal | *Pending UI* |
 | `/attendances/:id` | `GET` | Auth/Admin | [x] | [ ] | Attendance Detail Inspection Drawer | *Pending UI* |
 | `/attendances/:id` | `PATCH` | Auth/Admin | [x] | [ ] | Edit Punch Time / Notes Modal | *Pending UI* |
@@ -55,9 +55,9 @@ This checklist tracks the end-to-end integration status between the **NestJS Bac
 
 | Endpoint | Method | Role | Backend | Web API (`api.ts`) | UI Component / Workflow | Status |
 | :--- | :--- | :--- | :---: | :---: | :--- | :---: |
-| `/schedules/my-schedule` | `GET` | Auth/Admin | [x] | [x] | [`ScheduleCard.tsx`](../web/components/ScheduleCard.tsx) | **Fully Integrated** |
-| `/schedules/today` | `GET` | Auth/Admin | [x] | [x] | [`ScheduleCard.tsx`](../web/components/ScheduleCard.tsx) (Today indicator) | **Fully Integrated** |
-| `/schedules/bulk` | `POST` | Admin | [x] | [x] | [`BulkScheduleModal.tsx`](../web/components/BulkScheduleModal.tsx) | **Fully Integrated** |
+| `/schedules/my-schedule` | `GET` | Auth/Admin | [x] | [x] | [`ScheduleCard.tsx`](../web/features/schedule/components/ScheduleCard.tsx) | **Fully Integrated** |
+| `/schedules/today` | `GET` | Auth/Admin | [x] | [x] | [`ScheduleCard.tsx`](../web/features/schedule/components/ScheduleCard.tsx) (Today indicator) | **Fully Integrated** |
+| `/schedules/bulk` | `POST` | Admin | [x] | [x] | [`BulkScheduleModal.tsx`](../web/features/schedule/components/BulkScheduleModal.tsx) | **Fully Integrated** |
 | `/schedules/bulk-users` | `POST` | Admin | [x] | [ ] | Multi-User Shift Assignment Modal | *Pending UI* |
 | `/schedules` | `GET` | Auth/Admin | [x] | [ ] | Raw Shift Table View | *Pending UI* |
 | `/schedules/:id` | `GET` | Auth/Admin | [x] | [ ] | Single Shift Inspection | *Pending UI* |

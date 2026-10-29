@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Center, Spinner, Text, VStack } from '@chakra-ui/react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth';
 
 export default function RootPage() {
   const { user, isLoading } = useAuth();
