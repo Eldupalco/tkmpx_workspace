@@ -16,16 +16,16 @@ import {
   todayDate,
 } from '../../common/utils/date.util.js';
 import {
-  DEFAULT_BREAK,
   LEAVE_STATUSES,
   PUNCH_COOLDOWN_SECONDS,
-  PUNCH_LABELS,
   PUNCH_ORDER,
   Punches,
   secondsSinceLastPunch,
+  hasBreak,
   hoursWorked,
   isWorking,
   nextPunch,
+  punchLabel,
   punchMetrics,
   punchStatus,
 } from './punch.rules.js';
@@ -253,7 +253,7 @@ export class AttendancesService {
     const onLeave = Boolean(record && LEAVE_STATUSES.includes(record.status));
     const next = onLeave
       ? null
-      : nextPunch(record, currentTime(now), shift?.breakStart ?? DEFAULT_BREAK.breakStart);
+      : nextPunch(record, currentTime(now), shift);
 
     return {
       today,
@@ -261,14 +261,16 @@ export class AttendancesService {
       isWorking: !onLeave && isWorking(record),
       completed: !onLeave && Boolean(record) && next === null,
       nextPunch: next,
-      nextPunchLabel: next ? PUNCH_LABELS[next] : null,
+      nextPunchLabel: next ? punchLabel(next, shift) : null,
       hoursWorked: record && !onLeave ? hoursWorked(record) : 0,
+      hasBreak: hasBreak(shift),
       shift: shift
         ? {
             startTime: shift.startTime,
             breakStart: shift.breakStart,
             breakEnd: shift.breakEnd,
             endTime: shift.endTime,
+            graceMinutes: shift.graceMinutes,
           }
         : null,
       record: record || null,
@@ -461,11 +463,7 @@ export class AttendancesService {
       throw new BadRequestException('You are on leave today');
     }
 
-    const slot = nextPunch(
-      record,
-      currentTime(now),
-      shift?.breakStart ?? DEFAULT_BREAK.breakStart,
-    );
+    const slot = nextPunch(record, currentTime(now), shift);
     if (!slot) {
       throw new BadRequestException('All four punches for today are already recorded');
     }
@@ -504,7 +502,7 @@ export class AttendancesService {
       },
     });
     if (count === 0) {
-      throw new ConflictException(`${PUNCH_LABELS[slot]} was already recorded`);
+      throw new ConflictException(`${punchLabel(slot, shift)} was already recorded`);
     }
     return this.findOne(record.id);
   }

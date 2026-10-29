@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "schedules" ADD COLUMN     "graceMinutes" INTEGER NOT NULL DEFAULT 0,
+ALTER COLUMN "breakEnd" DROP NOT NULL,
+ALTER COLUMN "breakStart" DROP NOT NULL;
+

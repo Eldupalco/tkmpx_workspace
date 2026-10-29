@@ -21,6 +21,8 @@ export interface Attendance extends DailyPunches {
   status: AttendanceStatus;
   notes?: string | null;
   users?: User | null;
+  /** Shift the punches were measured against; breakStart null = no lunch break */
+  schedules?: { shiftName?: string | null; dayOfWeek: number; breakStart: string | null } | null;
 }
 
 export interface PaginationMeta {
@@ -80,6 +82,14 @@ export interface TodayPunchStatus {
   nextPunch: PunchSlot | null;
   nextPunchLabel: string | null;
   hoursWorked: number;
-  shift: { startTime: string; breakStart: string; breakEnd: string; endTime: string } | null;
+  /** false = single Time In / Time Out session */
+  hasBreak: boolean;
+  shift: {
+    startTime: string;
+    breakStart: string | null;
+    breakEnd: string | null;
+    endTime: string;
+    graceMinutes: number;
+  } | null;
   record: Attendance | null;
 }

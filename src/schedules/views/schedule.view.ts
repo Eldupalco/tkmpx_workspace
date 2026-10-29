@@ -27,11 +27,14 @@ export class ScheduleView {
   @ApiProperty({ example: '17:00' })
   endTime: string;
 
-  @ApiProperty({ example: '12:00' })
-  breakStart: string;
+  @ApiPropertyOptional({ example: '12:00', nullable: true, description: 'null = no break' })
+  breakStart: string | null;
 
-  @ApiProperty({ example: '13:00' })
-  breakEnd: string;
+  @ApiPropertyOptional({ example: '13:00', nullable: true, description: 'null = no break' })
+  breakEnd: string | null;
+
+  @ApiProperty({ example: 0 })
+  graceMinutes: number;
 
   @ApiProperty({ example: 'Sample shiftName' })
   shiftName: string;

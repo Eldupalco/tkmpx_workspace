@@ -19,7 +19,7 @@ import {
   Button,
 } from '@chakra-ui/react';
 import { AuthGuard } from '@/features/auth';
-import { BulkScheduleModal } from '@/features/schedule';
+import { BulkScheduleModal, ManageShiftsModal } from '@/features/schedule';
 import { UserModal } from '@/features/users';
 import { Navbar } from '@/components';
 import { useAdminDashboard } from './hooks/useAdminDashboard';
@@ -45,6 +45,9 @@ function AdminDashboardContent() {
     scheduleDisclosure,
     scheduleTargetUserId,
     openScheduleForUser,
+    manageShiftsDisclosure,
+    manageShiftsUser,
+    bulkAssignFromManage,
     userModalDisclosure,
     userToEdit,
     handleExportCsv,
@@ -209,13 +212,25 @@ function AdminDashboardContent() {
                   onOpenCreateUser={team.openCreateUser}
                   onOpenEditUser={team.openEditUser}
                   onDeleteUser={team.deleteUser}
-                  onOpenSchedule={team.openSchedule}
+                  onManageShifts={team.manageShifts}
                 />
               </TabPanel>
             </TabPanels>
           </Tabs>
         </VStack>
       </Container>
+
+      {/* Per-employee shift management */}
+      {token && (
+        <ManageShiftsModal
+          isOpen={manageShiftsDisclosure.isOpen}
+          onClose={manageShiftsDisclosure.onClose}
+          user={manageShiftsUser}
+          token={token}
+          onBulkAssign={bulkAssignFromManage}
+          onChanged={loadAdminData}
+        />
+      )}
 
       {/* Bulk Schedule Assignment Modal */}
       {token && team.usersList.length > 0 && (

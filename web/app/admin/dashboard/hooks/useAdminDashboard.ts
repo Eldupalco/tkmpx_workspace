@@ -73,6 +73,8 @@ export function useAdminDashboard() {
 
   // Modals state
   const scheduleDisclosure = useDisclosure();
+  const manageShiftsDisclosure = useDisclosure();
+  const [manageShiftsUser, setManageShiftsUser] = useState<User | null>(null);
   const [scheduleTargetUserId, setScheduleTargetUserId] = useState<string>('');
   const userModalDisclosure = useDisclosure();
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -164,6 +166,18 @@ export function useAdminDashboard() {
   const openScheduleForUser = (userId?: string) => {
     setScheduleTargetUserId(userId || '');
     scheduleDisclosure.onOpen();
+  };
+
+  // Per-employee shift list (edit / deactivate / delete)
+  const openManageShifts = (target: User) => {
+    setManageShiftsUser(target);
+    manageShiftsDisclosure.onOpen();
+  };
+
+  // From the shift list, switch to the bulk weekly assignment for the same employee
+  const bulkAssignFromManage = (userId: string) => {
+    manageShiftsDisclosure.onClose();
+    openScheduleForUser(userId);
   };
 
   const handleOpenCreateUser = () => {
@@ -270,11 +284,15 @@ export function useAdminDashboard() {
       openEditUser: handleOpenEditUser,
       deleteUser: handleDeleteUser,
       openSchedule: openScheduleForUser,
+      manageShifts: openManageShifts,
     },
     // Modals
     scheduleDisclosure,
     scheduleTargetUserId,
     openScheduleForUser,
+    manageShiftsDisclosure,
+    manageShiftsUser,
+    bulkAssignFromManage,
     userModalDisclosure,
     userToEdit,
     handleExportCsv,

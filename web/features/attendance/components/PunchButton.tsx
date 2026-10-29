@@ -21,6 +21,12 @@ const SLOTS: { key: PunchSlot; label: string }[] = [
   { key: 'pmOut', label: 'Afternoon Out' },
 ];
 
+// Shifts without a lunch break: one session
+const NO_BREAK_SLOTS: { key: PunchSlot; label: string }[] = [
+  { key: 'amIn', label: 'Time In' },
+  { key: 'amOut', label: 'Time Out' },
+];
+
 interface PunchButtonProps {
   status: TodayPunchStatus | null;
   isLoading: boolean;
@@ -89,6 +95,7 @@ export function PunchButton({ status, isLoading, onPunch }: PunchButtonProps) {
   }, [openSince]);
 
   const badge = dutyBadge(status);
+  const slots = status && !status.hasBreak ? NO_BREAK_SLOTS : SLOTS;
   const next = status?.nextPunch ?? null;
   const isInPunch = next === 'amIn' || next === 'pmIn';
   const isActive = Boolean(status?.isWorking);
@@ -186,8 +193,8 @@ export function PunchButton({ status, isLoading, onPunch }: PunchButtonProps) {
       </Flex>
 
       {/* Daily Time Record: the four punches of today */}
-      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mt={5}>
-        {SLOTS.map((slot) => {
+      <SimpleGrid columns={{ base: 2, md: slots.length }} spacing={3} mt={5}>
+        {slots.map((slot) => {
           const value = record?.[slot.key];
           const isNext = slot.key === next;
           return (

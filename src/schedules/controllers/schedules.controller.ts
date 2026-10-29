@@ -87,7 +87,7 @@ export class SchedulesController {
   @ApiResponse({ status: 200, description: 'Paginated records', type: PaginatedScheduleView })
   findAll(@Query() query: QueryScheduleDto, @Request() req: any) {
     if (req.user?.role !== 'admin') {
-      (query as any).userId = req.user.sub;
+      query.userId = req.user.sub;
     }
     return this.schedulesService.findAll(query);
   }

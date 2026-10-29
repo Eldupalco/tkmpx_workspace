@@ -30,19 +30,22 @@ model attendances {
 }
 
 model schedules {
-  id          String        @id
-  userId      String
-  dayOfWeek   Int
-  startTime   String
-  endTime     String
-  breakStart  String        @default("12:00")
-  breakEnd    String        @default("13:00")
-  shiftName   String?
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  attendances attendances[]
-  users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String        @id
+  userId       String
+  dayOfWeek    Int
+  startTime    String
+  endTime      String
+  // Lunch break; both null = shift without a break (single Time In / Time Out)
+  breakStart   String?       @default("12:00")
+  breakEnd     String?       @default("13:00")
+  // Minutes after start / break end before a punch counts as late
+  graceMinutes Int           @default(0)
+  shiftName    String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  attendances  attendances[]
+  users        users         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dayOfWeek])
 }

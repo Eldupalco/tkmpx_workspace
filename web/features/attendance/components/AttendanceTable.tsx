@@ -28,6 +28,12 @@ const LEAVE_STATUSES = ['on_leave', 'leave'];
 
 /** Label of the next punch for a row, or null when the day is complete */
 function nextPunchLabel(r: Attendance): string | null {
+  // Shift without a lunch break: single Time In / Time Out session
+  if (r.schedules && r.schedules.breakStart === null) {
+    if (!r.amIn) return 'Time In';
+    if (!r.amOut) return 'Time Out';
+    return null;
+  }
   if (!r.amIn && !r.pmIn) return 'Punch In';
   if (r.amIn && !r.amOut && !r.pmIn) return 'Morning Out';
   if (!r.pmIn) return 'Afternoon In';

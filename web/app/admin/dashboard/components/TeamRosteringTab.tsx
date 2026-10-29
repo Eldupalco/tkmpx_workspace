@@ -51,7 +51,7 @@ interface TeamRosteringTabProps {
   onOpenCreateUser: () => void;
   onOpenEditUser: (user: User) => void;
   onDeleteUser: (id: string, name: string) => void;
-  onOpenSchedule: (userId?: string) => void;
+  onManageShifts: (user: User) => void;
 }
 
 export function TeamRosteringTab({
@@ -71,7 +71,7 @@ export function TeamRosteringTab({
   onOpenCreateUser,
   onOpenEditUser,
   onDeleteUser,
-  onOpenSchedule,
+  onManageShifts,
 }: TeamRosteringTabProps) {
   const hasActiveFilters = Boolean(teamSearchTerm || teamRoleFilter !== 'all');
 
@@ -239,7 +239,7 @@ export function TeamRosteringTab({
                           _hover={{ bg: 'slate.50', borderColor: 'slate.300', color: 'slate.900' }}
                           borderRadius="md"
                           leftIcon={<Icon as={FiCalendar} boxSize={3} color="brand.600" />}
-                          onClick={() => onOpenSchedule(u.id)}
+                          onClick={() => onManageShifts(u)}
                         >
                           Shifts
                         </Button>

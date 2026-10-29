@@ -5,8 +5,10 @@ export interface ShiftSchedule {
   dayName: string;
   startTime: string;
   endTime: string;
-  breakStart: string;
-  breakEnd: string;
+  /** null = shift without a lunch break */
+  breakStart: string | null;
+  breakEnd: string | null;
+  graceMinutes: number;
   shiftName?: string;
   isActive: boolean;
 }
@@ -23,8 +25,19 @@ export interface BulkSchedulePayload {
   workDays: number[];
   startTime: string;
   endTime: string;
-  breakStart?: string;
-  breakEnd?: string;
+  breakStart?: string | null;
+  breakEnd?: string | null;
+  graceMinutes?: number;
   shiftName?: string;
+}
+
+export interface UpdateSchedulePayload {
+  startTime?: string;
+  endTime?: string;
+  breakStart?: string | null;
+  breakEnd?: string | null;
+  graceMinutes?: number;
+  shiftName?: string;
+  isActive?: boolean;
 }
 

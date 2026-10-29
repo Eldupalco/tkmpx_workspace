@@ -8,6 +8,7 @@ export const scheduleSelect = {
   endTime: true,
   breakStart: true,
   breakEnd: true,
+  graceMinutes: true,
   shiftName: true,
   isActive: true,
   createdAt: true,

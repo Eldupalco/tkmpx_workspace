@@ -24,21 +24,34 @@ const DAY_NAMES = [
   'Sunday',
 ];
 
-/** Day shift times must run in order: start < breakStart <= breakEnd < end */
-function assertShiftOrder(shift: {
+/**
+ * Validates shift times and resolves the break: undefined = default 12:00-13:00,
+ * null on both = no break. Order must be start < breakStart <= breakEnd < end (or start < end).
+ */
+function resolveShift(shift: {
   startTime: string;
   endTime: string;
-  breakStart?: string;
-  breakEnd?: string;
+  breakStart?: string | null;
+  breakEnd?: string | null;
 }) {
-  const breakStart = shift.breakStart ?? '12:00';
-  const breakEnd = shift.breakEnd ?? '13:00';
+  const breakStart = shift.breakStart === undefined ? '12:00' : shift.breakStart;
+  const breakEnd = shift.breakEnd === undefined ? '13:00' : shift.breakEnd;
+  if ((breakStart === null) !== (breakEnd === null)) {
+    throw new BadRequestException('Set both breakStart and breakEnd, or both to null for a shift without a break');
+  }
   // HH:mm strings compare correctly as text
-  if (!(shift.startTime < breakStart && breakStart <= breakEnd && breakEnd < shift.endTime)) {
+  const ordered =
+    breakStart === null || breakEnd === null
+      ? shift.startTime < shift.endTime
+      : shift.startTime < breakStart && breakStart <= breakEnd && breakEnd < shift.endTime;
+  if (!ordered) {
     throw new BadRequestException(
-      `Shift times must be in order: startTime (${shift.startTime}) < breakStart (${breakStart}) <= breakEnd (${breakEnd}) < endTime (${shift.endTime})`,
+      breakStart === null
+        ? `Shift times must be in order: startTime (${shift.startTime}) < endTime (${shift.endTime})`
+        : `Shift times must be in order: startTime (${shift.startTime}) < breakStart (${breakStart}) <= breakEnd (${breakEnd}) < endTime (${shift.endTime})`,
     );
   }
+  return { breakStart, breakEnd };
 }
 
 @Injectable()
@@ -46,12 +59,13 @@ export class SchedulesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateScheduleDto) {
-    assertShiftOrder(dto);
+    const breakTimes = resolveShift(dto);
     try {
       return await (this.prisma as any).schedules.create({
         data: {
           id: randomUUID(),
           ...dto,
+          ...breakTimes,
           updatedAt: new Date(),
         },
         select: scheduleSelect,
@@ -77,6 +91,8 @@ export class SchedulesService {
     if (query?.search) {
       where.OR = [
         { userId: { contains: query.search, mode: 'insensitive' } },
+        { users: { name: { contains: query.search, mode: 'insensitive' } } },
+        { users: { email: { contains: query.search, mode: 'insensitive' } } },
         { startTime: { contains: query.search, mode: 'insensitive' } },
         { endTime: { contains: query.search, mode: 'insensitive' } },
         { shiftName: { contains: query.search, mode: 'insensitive' } },
@@ -84,7 +100,7 @@ export class SchedulesService {
     }
     if (query?.dayOfWeek !== undefined) where.dayOfWeek = query.dayOfWeek;
     if (query?.isActive !== undefined) where.isActive = query.isActive;
-    if ((query as any)?.userId) where.userId = (query as any).userId;
+    if (query?.userId) where.userId = query.userId;
 
     const sortBy = query?.sortBy || 'createdAt';
     const sortOrder = query?.sortOrder === 'asc' ? 'asc' : 'desc';
@@ -125,7 +141,8 @@ export class SchedulesService {
 
   async update(id: string, dto: UpdateScheduleDto) {
     const existing = await this.findOne(id);
-    assertShiftOrder({ ...existing, ...dto });
+    // Merge with the stored shift so a partial update is validated as a whole
+    resolveShift({ ...existing, ...dto });
     try {
       return await (this.prisma as any).schedules.update({
         where: { id },
@@ -206,12 +223,11 @@ export class SchedulesService {
     userIds: string[],
     shift: Omit<BulkScheduleDto, 'userId'>,
   ) {
-    assertShiftOrder(shift);
     const fields = {
       startTime: shift.startTime,
       endTime: shift.endTime,
-      breakStart: shift.breakStart ?? '12:00',
-      breakEnd: shift.breakEnd ?? '13:00',
+      ...resolveShift(shift),
+      graceMinutes: shift.graceMinutes ?? 0,
       shiftName: shift.shiftName || 'Standard Shift',
       isActive: true,
       updatedAt: new Date(),

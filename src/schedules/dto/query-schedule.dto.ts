@@ -61,4 +61,9 @@ export class QueryScheduleDto {
       value === 'true' || value === true || (value === 'false' ? false : value),
   )
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by userId (admins; non-admins always see their own)' })
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }

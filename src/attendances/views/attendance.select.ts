@@ -19,6 +19,7 @@ export const attendanceSelect = {
     select: {
       shiftName: true,
       dayOfWeek: true,
+      breakStart: true,
       userId: true,
     },
   },

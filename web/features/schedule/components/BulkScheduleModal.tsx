@@ -57,6 +57,8 @@ export function BulkScheduleModal({
   const [endTime, setEndTime] = useState('17:00');
   const [breakStart, setBreakStart] = useState('12:00');
   const [breakEnd, setBreakEnd] = useState('13:00');
+  const [noBreak, setNoBreak] = useState(false);
+  const [graceMinutes, setGraceMinutes] = useState(0);
   const [shiftName, setShiftName] = useState('Standard Shift');
   const [loading, setLoading] = useState(false);
 
@@ -71,8 +73,10 @@ export function BulkScheduleModal({
         workDays: workDays.map(Number),
         startTime,
         endTime,
-        breakStart,
-        breakEnd,
+        // null on both = shift without a lunch break
+        breakStart: noBreak ? null : breakStart,
+        breakEnd: noBreak ? null : breakEnd,
+        graceMinutes,
         shiftName,
       });
 
@@ -189,8 +193,17 @@ export function BulkScheduleModal({
                 </FormControl>
               </Stack>
 
-              <Stack direction={['column', 'row']} spacing={3}>
-                <FormControl isRequired>
+              <Checkbox
+                isChecked={noBreak}
+                onChange={(e) => setNoBreak(e.target.checked)}
+                colorScheme="brand"
+                fontSize="sm"
+              >
+                No lunch break (single Time In / Time Out, e.g. half-day or part-time shift)
+              </Checkbox>
+
+              <Stack direction={['column', 'row']} spacing={3} display={noBreak ? 'none' : 'flex'}>
+                <FormControl isRequired={!noBreak}>
                   <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="slate.600">
                     Lunch Break Start
                   </FormLabel>
@@ -205,7 +218,7 @@ export function BulkScheduleModal({
                   />
                 </FormControl>
 
-                <FormControl isRequired>
+                <FormControl isRequired={!noBreak}>
                   <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="slate.600">
                     Lunch Break End
                   </FormLabel>
@@ -220,6 +233,23 @@ export function BulkScheduleModal({
                   />
                 </FormControl>
               </Stack>
+
+              <FormControl>
+                <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="slate.600">
+                  Late Grace Period (minutes)
+                </FormLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  max={120}
+                  borderRadius="lg"
+                  bg="slate.50"
+                  borderColor="slate.200"
+                  fontSize="sm"
+                  value={graceMinutes}
+                  onChange={(e) => setGraceMinutes(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
+                />
+              </FormControl>
 
               <FormControl>
                 <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="slate.600">

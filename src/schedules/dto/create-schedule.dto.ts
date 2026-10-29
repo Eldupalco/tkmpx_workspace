@@ -38,17 +38,39 @@ export class CreateScheduleDto {
   @Matches(TIME_PATTERN, { message: 'endTime must be in HH:mm (24-hour) format' })
   endTime: string;
 
-  @ApiPropertyOptional({ example: '12:00', default: '12:00', description: 'Lunch break start' })
+  @ApiPropertyOptional({
+    example: '12:00',
+    default: '12:00',
+    nullable: true,
+    description: 'Lunch break start; null (with breakEnd null) = shift without a break',
+  })
   @IsOptional()
   @IsString()
   @Matches(TIME_PATTERN, { message: 'breakStart must be in HH:mm (24-hour) format' })
-  breakStart?: string;
+  breakStart?: string | null;
 
-  @ApiPropertyOptional({ example: '13:00', default: '13:00', description: 'Lunch break end' })
+  @ApiPropertyOptional({
+    example: '13:00',
+    default: '13:00',
+    nullable: true,
+    description: 'Lunch break end; null (with breakStart null) = shift without a break',
+  })
   @IsOptional()
   @IsString()
   @Matches(TIME_PATTERN, { message: 'breakEnd must be in HH:mm (24-hour) format' })
-  breakEnd?: string;
+  breakEnd?: string | null;
+
+  @ApiPropertyOptional({
+    example: 5,
+    default: 0,
+    description: 'Minutes after start / break end that still count as on time',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(120)
+  graceMinutes?: number;
 
   @ApiPropertyOptional({ example: 'Sample shiftName' })
   @IsOptional()
