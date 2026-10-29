@@ -17,46 +17,69 @@ import {
   IconButton,
   Skeleton,
 } from '@chakra-ui/react';
-import { FiRefreshCw, FiRotateCcw, FiSearch } from 'react-icons/fi';
-import { Attendance, PaginationMeta, AttendanceTable } from '@/features/attendance';
+import { useEffect, useState } from 'react';
+import { FiDownload, FiRefreshCw, FiRotateCcw, FiSearch } from 'react-icons/fi';
+import { useAuth } from '@/features/auth';
+import {
+  AttendanceTable,
+  downloadAttendanceCsv,
+  PaginationMeta,
+  useAttendanceHistory,
+} from '@/features/attendance';
 import { Pagination, DateRangePopover } from '@/components';
 
-interface PunchHistorySectionProps {
-  records: Attendance[];
-  meta: PaginationMeta;
-  loading: boolean;
-  searchTerm: string;
-  setSearchTerm: (val: string) => void;
-  statusFilter: string;
-  setStatusFilter: (val: string) => void;
-  startDate: string;
-  setStartDate: (val: string) => void;
-  endDate: string;
-  setEndDate: (val: string) => void;
-  setPage: (p: number) => void;
-  setLimit: (l: number) => void;
-  resetFilters: () => void;
-  onRefresh: () => void;
-}
+export function PunchHistorySection() {
+  const { user, token } = useAuth();
 
-export function PunchHistorySection({
-  records,
-  meta,
-  loading,
-  searchTerm,
-  setSearchTerm,
-  statusFilter,
-  setStatusFilter,
-  startDate,
-  setStartDate,
-  endDate,
-  setEndDate,
-  setPage,
-  setLimit,
-  resetFilters,
-  onRefresh,
-}: PunchHistorySectionProps) {
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+
+  // Search runs 300ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchTerm);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const hasActiveFilters = Boolean(searchTerm || statusFilter !== 'all' || startDate || endDate);
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+  };
+
+  // Exports the same date range shown in the table
+  const handleExportCsv = () => {
+    if (!token || !user) return;
+    downloadAttendanceCsv(token, {
+      userId: user.id,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    });
+  };
+
+  const historyQuery = useAttendanceHistory({
+    page,
+    limit,
+    search: search || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+  const records = historyQuery.data?.data ?? [];
+  const meta: PaginationMeta = historyQuery.data?.meta ?? { total: 0, page: 1, limit, totalPages: 1 };
+  const loading = historyQuery.isPending;
 
   return (
     <Box p={6} bg="white" border="1px solid" borderColor="slate.200" borderRadius="xl" shadow="xs">
@@ -82,20 +105,27 @@ export function PunchHistorySection({
           </Text>
         </Box>
 
-        <Button
-          size="sm"
-          variant="outline"
-          bg="white"
-          borderColor="slate.200"
-          color="slate.700"
-          borderRadius="lg"
-          fontSize="xs"
-          leftIcon={<Icon as={FiRefreshCw} boxSize={3} color="slate.500" />}
-          onClick={onRefresh}
-          flexShrink={0}
-        >
-          Refresh
-        </Button>
+        <HStack spacing={2} flexShrink={0}>
+          <Button
+            size="sm"
+            variant="outline"
+            fontSize="xs"
+            leftIcon={<Icon as={FiDownload} boxSize={3} color="slate.500" />}
+            onClick={handleExportCsv}
+          >
+            Export CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            fontSize="xs"
+            leftIcon={<Icon as={FiRefreshCw} boxSize={3} color="slate.500" />}
+            onClick={() => historyQuery.refetch()}
+            isLoading={historyQuery.isRefetching}
+          >
+            Refresh
+          </Button>
+        </HStack>
       </Flex>
 
       {/* Row 2: Search & Filter Toolbar */}

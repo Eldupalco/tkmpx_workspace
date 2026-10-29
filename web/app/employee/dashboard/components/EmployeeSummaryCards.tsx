@@ -2,22 +2,14 @@
 
 import { SimpleGrid, Box, Skeleton } from '@chakra-ui/react';
 import { StatCard } from '@/components';
+import { AttendanceSummary, useAttendanceSummary } from '@/features/attendance';
 
-interface AttendanceSummary {
-  total: number;
-  present: number;
-  late: number;
-  absent: number;
-  onLeave: number;
-}
+const EMPTY_SUMMARY: AttendanceSummary = { total: 0, present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 };
 
-interface EmployeeSummaryCardsProps {
-  summary: AttendanceSummary;
-  loading: boolean;
-}
+export function EmployeeSummaryCards() {
+  const { data: summary = EMPTY_SUMMARY, isPending } = useAttendanceSummary();
 
-export function EmployeeSummaryCards({ summary, loading }: EmployeeSummaryCardsProps) {
-  if (loading) {
+  if (isPending) {
     return (
       <SimpleGrid columns={{ base: 2, sm: 4 }} spacing={4}>
         {[1, 2, 3, 4].map((i) => (

@@ -1,16 +1,13 @@
 'use client';
 
 import { Box, SimpleGrid, Skeleton } from '@chakra-ui/react';
-import { ScheduleCard, ShiftSchedule, TodaySchedule } from '@/features/schedule';
+import { ScheduleCard, useMySchedule, useTodaySchedule } from '@/features/schedule';
 
-interface ScheduleSectionProps {
-  shifts: ShiftSchedule[];
-  todayShift: TodaySchedule | null;
-  loading: boolean;
-}
+export function ScheduleSection() {
+  const myShiftsQuery = useMySchedule();
+  const todayShiftQuery = useTodaySchedule();
 
-export function ScheduleSection({ shifts, todayShift, loading }: ScheduleSectionProps) {
-  if (loading) {
+  if (myShiftsQuery.isPending || todayShiftQuery.isPending) {
     return (
       <Box p={5} bg="white" border="1px solid" borderColor="slate.200" borderRadius="xl">
         <Skeleton h="18px" w="180px" mb={4} borderRadius="md" />
@@ -23,5 +20,5 @@ export function ScheduleSection({ shifts, todayShift, loading }: ScheduleSection
     );
   }
 
-  return <ScheduleCard shifts={shifts} todayShift={todayShift} />;
+  return <ScheduleCard shifts={myShiftsQuery.data ?? []} todayShift={todayShiftQuery.data ?? null} />;
 }

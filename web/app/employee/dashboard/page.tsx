@@ -1,19 +1,6 @@
 'use client';
 
-import {
-  Box,
-  Container,
-  VStack,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  Button,
-} from '@chakra-ui/react';
-import { AuthGuard } from '@/features/auth';
-import { TimesheetModal, LeaveRequestModal } from '@/features/attendance';
-import { Navbar } from '@/components';
-import { useEmployeeDashboard } from './hooks/useEmployeeDashboard';
+import { VStack } from '@chakra-ui/react';
 import {
   EmployeeHeader,
   PunchTerminalCard,
@@ -22,125 +9,15 @@ import {
   PunchHistorySection,
 } from './components';
 
-function EmployeeDashboardContent() {
-  const {
-    user,
-    token,
-    isLiveApi,
-    apiError,
-    loadAllData,
-    punch,
-    summary,
-    summaryLoading,
-    myShifts,
-    todayShift,
-    scheduleLoading,
-    history,
-    timesheetDisclosure,
-    timesheetData,
-    timesheetLoading,
-    leaveDisclosure,
-    handleOpenTimesheet,
-    handleExportCsv,
-  } = useEmployeeDashboard();
-
-  return (
-    <Box minH="100vh" bg="slate.50">
-      <Navbar isLiveApi={isLiveApi} />
-
-      <Container maxW="1200px" py={8}>
-        <VStack spacing={6} align="stretch">
-          {/* API Connection Warning */}
-          {apiError && (
-            <Alert status="warning" borderRadius="xl" shadow="xs" border="1px solid"  borderColor="amber.200">
-              <AlertIcon />
-              <Box flex="1">
-                <AlertTitle fontSize="sm">
-                  {isLiveApi ? 'Some data could not be loaded' : 'API Connection Notice'}
-                </AlertTitle>
-                <AlertDescription fontSize="xs">
-                  {isLiveApi ? apiError : 'NestJS backend is unreachable.'}
-                </AlertDescription>
-              </Box>
-              <Button size="xs" colorScheme="orange" onClick={loadAllData}>
-                Retry
-              </Button>
-            </Alert>
-          )}
-
-          {/* 1. Header & Quick Actions */}
-          <EmployeeHeader
-            userName={user?.name}
-            onOpenTimesheet={handleOpenTimesheet}
-            onOpenLeave={leaveDisclosure.onOpen}
-            onExportCsv={handleExportCsv}
-          />
-
-          {/* 2. Clock-In / Clock-Out Punch Terminal */}
-          <PunchTerminalCard
-            status={punch.status}
-            isLoading={punch.actionLoading}
-            notes={punch.notes}
-            setNotes={punch.setNotes}
-            onPunch={punch.onPunch}
-          />
-
-          {/* 3. Metric Summary Cards */}
-          <EmployeeSummaryCards summary={summary} loading={summaryLoading} />
-
-          {/* 4. Weekly Schedule Card */}
-          <ScheduleSection
-            shifts={myShifts}
-            todayShift={todayShift}
-            loading={scheduleLoading}
-          />
-
-          {/* 5. Personal Punch History & Filters */}
-          <PunchHistorySection
-            records={history.records}
-            meta={history.meta}
-            loading={history.loading}
-            searchTerm={history.searchTerm}
-            setSearchTerm={history.setSearchTerm}
-            statusFilter={history.statusFilter}
-            setStatusFilter={history.setStatusFilter}
-            startDate={history.startDate}
-            setStartDate={history.setStartDate}
-            endDate={history.endDate}
-            setEndDate={history.setEndDate}
-            setPage={history.setPage}
-            setLimit={history.setLimit}
-            resetFilters={history.resetFilters}
-            onRefresh={loadAllData}
-          />
-        </VStack>
-      </Container>
-
-      {/* Timesheet & Overtime Modal */}
-      <TimesheetModal
-        isOpen={timesheetDisclosure.isOpen}
-        onClose={timesheetDisclosure.onClose}
-        timesheetData={timesheetData}
-        isLoading={timesheetLoading}
-      />
-
-      {/* Leave Request Modal */}
-      {token && (
-        <LeaveRequestModal
-          isOpen={leaveDisclosure.isOpen}
-          onClose={leaveDisclosure.onClose}
-          token={token}
-          onSuccess={loadAllData}
-        />
-      )}
-    </Box>
-  );
-}
-
+// Auth, navbar and container come from app/employee/layout.tsx; each section loads its own data
 export default function EmployeeDashboardPage() {
   return (
-    <AuthGuard allowedRoles={['user', 'admin']}>
-      <EmployeeDashboardContent />
-    </AuthGuard>
+    <VStack spacing={6} align="stretch">
+      <EmployeeHeader />
+      <PunchTerminalCard />
+      <EmployeeSummaryCards />
+      <ScheduleSection />
+      <PunchHistorySection />
+    </VStack>
   );
 }
