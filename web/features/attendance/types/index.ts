@@ -1,13 +1,23 @@
 import { User } from '@/features/auth/types';
 
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half_day' | 'leave' | 'on_leave';
 
-export interface Attendance {
+/** Daily Time Record punch slots, always recorded in this order */
+export type PunchSlot = 'amIn' | 'amOut' | 'pmIn' | 'pmOut';
+
+export interface DailyPunches {
+  amIn?: string | null;
+  amOut?: string | null;
+  pmIn?: string | null;
+  pmOut?: string | null;
+}
+
+export interface Attendance extends DailyPunches {
   id: string;
   userId: string;
   date: string;
-  checkInTime: string;
-  checkOutTime?: string | null;
+  lateMinutes: number;
+  undertimeMinutes: number;
   status: AttendanceStatus;
   notes?: string | null;
   users?: User | null;
@@ -37,14 +47,14 @@ export interface FetchAttendanceParams {
   token?: string;
 }
 
-export interface TimesheetRecord {
+export interface TimesheetRecord extends DailyPunches {
   id: string;
   date: string;
-  checkInTime: string;
-  checkOutTime?: string | null;
   status: string;
   hoursWorked: number;
   overtime: number;
+  lateMinutes: number;
+  undertimeMinutes: number;
 }
 
 export interface TimesheetSummary {
@@ -52,6 +62,8 @@ export interface TimesheetSummary {
   daysWorked: number;
   overtimeHours: number;
   averageHoursPerDay: number;
+  totalLateMinutes: number;
+  totalUndertimeMinutes: number;
 }
 
 export interface TimesheetData {
@@ -59,3 +71,15 @@ export interface TimesheetData {
   records: TimesheetRecord[];
 }
 
+
+export interface TodayPunchStatus {
+  today: string;
+  onLeave: boolean;
+  isWorking: boolean;
+  completed: boolean;
+  nextPunch: PunchSlot | null;
+  nextPunchLabel: string | null;
+  hoursWorked: number;
+  shift: { startTime: string; breakStart: string; breakEnd: string; endTime: string } | null;
+  record: Attendance | null;
+}

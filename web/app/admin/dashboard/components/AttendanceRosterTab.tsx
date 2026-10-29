@@ -37,7 +37,7 @@ interface AttendanceRosterTabProps {
   setLimit: (l: number) => void;
   resetFilters: () => void;
   onRefresh: () => void;
-  onCheckOut: (id: string) => void;
+  onPunch: (record: Attendance) => void;
 }
 
 export function AttendanceRosterTab({
@@ -56,7 +56,7 @@ export function AttendanceRosterTab({
   setLimit,
   resetFilters,
   onRefresh,
-  onCheckOut,
+  onPunch,
 }: AttendanceRosterTabProps) {
   const hasActiveFilters = Boolean(employeeSearch || statusFilter !== 'all' || startDate || endDate);
 
@@ -184,7 +184,7 @@ export function AttendanceRosterTab({
         </Box>
       ) : (
         <>
-          <AttendanceTable records={records} onCheckOut={onCheckOut} />
+          <AttendanceTable records={records} onPunch={onPunch} />
           <Pagination
             page={meta.page}
             totalPages={meta.totalPages}

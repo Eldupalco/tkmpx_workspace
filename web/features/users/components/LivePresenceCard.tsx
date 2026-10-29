@@ -89,8 +89,8 @@ export function LivePresenceCard({ currentlyInList }: LivePresenceCardProps) {
                 <HStack spacing={1} mt={0.5}>
                   <Icon as={FiClock} boxSize={3} color="slate.400" />
                   <Text fontSize="10px" color="slate.500" fontFamily="mono">
-                    Clocked in at{' '}
-                    {new Date(item.checkInTime).toLocaleTimeString([], {
+                    {item.pmIn ? 'Afternoon in' : 'Morning in'} at{' '}
+                    {new Date((item.pmIn ?? item.amIn) as string).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}

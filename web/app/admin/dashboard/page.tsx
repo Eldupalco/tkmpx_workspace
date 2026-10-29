@@ -181,7 +181,7 @@ function AdminDashboardContent() {
                   setLimit={roster.setLimit}
                   resetFilters={roster.resetFilters}
                   onRefresh={loadAdminData}
-                  onCheckOut={roster.onCheckOut}
+                  onPunch={roster.onPunch}
                 />
               </TabPanel>
 

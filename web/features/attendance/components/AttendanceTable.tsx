@@ -20,10 +20,30 @@ import { FiCalendar } from 'react-icons/fi';
 
 interface AttendanceTableProps {
   records: Attendance[];
-  onCheckOut?: (attendanceId: string) => void;
+  /** Admin override: record the employee's next punch (today's rows only) */
+  onPunch?: (record: Attendance) => void;
 }
 
-export function AttendanceTable({ records, onCheckOut }: AttendanceTableProps) {
+const LEAVE_STATUSES = ['on_leave', 'leave'];
+
+/** Label of the next punch for a row, or null when the day is complete */
+function nextPunchLabel(r: Attendance): string | null {
+  if (!r.amIn && !r.pmIn) return 'Punch In';
+  if (r.amIn && !r.amOut && !r.pmIn) return 'Morning Out';
+  if (!r.pmIn) return 'Afternoon In';
+  if (!r.pmOut) return 'Afternoon Out';
+  return null;
+}
+
+function hoursWorked(r: Attendance): number {
+  const span = (from?: string | null, to?: string | null) =>
+    from && to ? Math.max(0, new Date(to).getTime() - new Date(from).getTime()) : 0;
+  return Number(((span(r.amIn, r.amOut) + span(r.pmIn, r.pmOut)) / 3_600_000).toFixed(2));
+}
+
+export function AttendanceTable({ records, onPunch }: AttendanceTableProps) {
+  // Business date as YYYY-MM-DD (en-CA formats ISO-style)
+  const today = new Date().toLocaleDateString('en-CA');
   if (records.length === 0) {
     return (
       <Box
@@ -75,6 +95,15 @@ export function AttendanceTable({ records, onCheckOut }: AttendanceTableProps) {
             <Box w="6px" h="6px" borderRadius="full" bg="amber.500" />
             <Text fontSize="11px" fontWeight="bold" color="amber.700" textTransform="uppercase">
               Late
+            </Text>
+          </HStack>
+        );
+      case 'half_day':
+        return (
+          <HStack spacing={1.5} bg="blue.50" px={2.5} py={0.5} borderRadius="full" w="fit-content">
+            <Box w="6px" h="6px" borderRadius="full" bg="blue.500" />
+            <Text fontSize="11px" fontWeight="bold" color="blue.700" textTransform="uppercase">
+              Half Day
             </Text>
           </HStack>
         );
@@ -132,10 +161,22 @@ export function AttendanceTable({ records, onCheckOut }: AttendanceTableProps) {
               EMPLOYEE
             </Th>
             <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
-              CHECK IN
+              AM IN
             </Th>
             <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
-              CHECK OUT
+              AM OUT
+            </Th>
+            <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
+              PM IN
+            </Th>
+            <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
+              PM OUT
+            </Th>
+            <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
+              HOURS
+            </Th>
+            <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
+              LATE / UT
             </Th>
             <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
               STATUS
@@ -143,7 +184,7 @@ export function AttendanceTable({ records, onCheckOut }: AttendanceTableProps) {
             <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em">
               NOTES
             </Th>
-            {onCheckOut && (
+            {onPunch && (
               <Th py={3} fontSize="10px" fontWeight="700" color="slate.500" letterSpacing="0.05em" isNumeric>
                 ACTION
               </Th>
@@ -168,29 +209,43 @@ export function AttendanceTable({ records, onCheckOut }: AttendanceTableProps) {
                   )}
                 </Box>
               </Td>
-              <Td py={3.5}>{formatTime(item.checkInTime)}</Td>
-              <Td py={3.5}>{formatTime(item.checkOutTime)}</Td>
+              <Td py={3.5}>{formatTime(item.amIn)}</Td>
+              <Td py={3.5}>{formatTime(item.amOut)}</Td>
+              <Td py={3.5}>{formatTime(item.pmIn)}</Td>
+              <Td py={3.5}>{formatTime(item.pmOut)}</Td>
+              <Td py={3.5} fontFamily="mono" fontSize="xs" color="slate.800">
+                {hoursWorked(item) > 0 ? `${hoursWorked(item)} h` : <Text as="span" color="slate.300">—</Text>}
+              </Td>
+              <Td py={3.5} fontSize="xs">
+                {item.lateMinutes > 0 || item.undertimeMinutes > 0 ? (
+                  <Text as="span" color="amber.700" fontWeight="600">
+                    {item.lateMinutes} / {item.undertimeMinutes} min
+                  </Text>
+                ) : (
+                  <Text as="span" color="slate.300">—</Text>
+                )}
+              </Td>
               <Td py={3.5}>{renderStatus(item.status)}</Td>
               <Td py={3.5} color="slate.500" fontSize="xs" maxW="200px" isTruncated>
                 {item.notes || <Text as="span" color="slate.300">—</Text>}
               </Td>
-              {onCheckOut && (
+              {onPunch && (
                 <Td py={3.5} isNumeric>
-                  {!item.checkOutTime ? (
+                  {item.date === today && !LEAVE_STATUSES.includes(item.status) && nextPunchLabel(item) ? (
                     <Button
                       size="xs"
-                      colorScheme="red"
+                      colorScheme="brand"
                       variant="outline"
                       borderRadius="md"
                       fontSize="11px"
                       h="26px"
-                      onClick={() => onCheckOut(item.id)}
+                      onClick={() => onPunch(item)}
                     >
-                      Clock Out
+                      {nextPunchLabel(item)}
                     </Button>
                   ) : (
                     <Badge colorScheme="slate" variant="subtle" fontSize="10px" borderRadius="full">
-                      Completed
+                      {nextPunchLabel(item) ? 'Closed' : 'Completed'}
                     </Badge>
                   )}
                 </Td>

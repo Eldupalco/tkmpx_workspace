@@ -6,14 +6,14 @@ import { useAuth } from '@/features/auth';
 import {
   fetchAttendances,
   fetchTodayStatus,
-  postCheckIn,
-  postCheckOut,
+  postPunch,
   fetchAttendanceSummary,
   fetchTimesheet,
   downloadAttendanceCsv,
   Attendance,
   PaginationMeta,
   TimesheetData,
+  TodayPunchStatus,
 } from '@/features/attendance';
 import {
   fetchMySchedule,
@@ -32,9 +32,7 @@ export function useEmployeeDashboard() {
   const [dataLoading, setDataLoading] = useState<boolean>(true);
 
   // Today Punch Status State
-  const [activeAttendanceId, setActiveAttendanceId] = useState<string | null>(null);
-  const [isCheckedIn, setIsCheckedIn] = useState<boolean>(false);
-  const [checkInTime, setCheckInTime] = useState<string | null>(null);
+  const [todayStatus, setTodayStatus] = useState<TodayPunchStatus | null>(null);
   const [notes, setNotes] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
@@ -43,9 +41,10 @@ export function useEmployeeDashboard() {
     total: number;
     present: number;
     late: number;
+    halfDay: number;
     absent: number;
     onLeave: number;
-  }>({ total: 0, present: 0, late: 0, absent: 0, onLeave: 0 });
+  }>({ total: 0, present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 });
 
   // Weekly Schedules
   const [myShifts, setMyShifts] = useState<ShiftSchedule[]>([]);
@@ -87,11 +86,7 @@ export function useEmployeeDashboard() {
     if (!token || !user) return;
     try {
       const statusRes = await fetchTodayStatus(token);
-      if (statusRes) {
-        setIsCheckedIn(statusRes.hasCheckedIn && !statusRes.hasCheckedOut);
-        setActiveAttendanceId(statusRes.record?.id || null);
-        setCheckInTime(statusRes.record?.checkInTime ? String(statusRes.record.checkInTime) : null);
-      }
+      setTodayStatus(statusRes ?? null);
 
       const sumRes = await fetchAttendanceSummary(token);
       if (sumRes) setSummary(sumRes);
@@ -130,15 +125,16 @@ export function useEmployeeDashboard() {
     loadAllData();
   }, [loadAllData]);
 
-  // Punch In Handler
-  const handleCheckIn = async () => {
+  // Records the next punch in sequence: Morning In -> Morning Out -> Afternoon In -> Afternoon Out
+  const handlePunch = async () => {
     if (!token) return;
+    const label = todayStatus?.nextPunchLabel ?? 'Punch';
     setActionLoading(true);
     try {
-      const created = await postCheckIn(token, notes);
+      await postPunch(token, notes || undefined);
       toast({
-        title: 'Check-In Punch Recorded!',
-        description: `Clocked in at ${new Date(created.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        title: `${label} Recorded`,
+        description: `Punched at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -147,37 +143,7 @@ export function useEmployeeDashboard() {
       await loadAllData();
     } catch (err: any) {
       toast({
-        title: 'Check-In Failed',
-        description: err.message,
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Punch Out Handler
-  const handleCheckOut = async (idToCheckout?: string) => {
-    if (!token) return;
-    const targetId = idToCheckout || activeAttendanceId;
-    if (!targetId) return;
-
-    setActionLoading(true);
-    try {
-      await postCheckOut(token, targetId);
-      toast({
-        title: 'Check-Out Punch Recorded!',
-        description: 'Have a wonderful evening!',
-        status: 'info',
-        duration: 3000,
-        isClosable: true,
-      });
-      await loadAllData();
-    } catch (err: any) {
-      toast({
-        title: 'Check-Out Failed',
+        title: `${label} Failed`,
         description: err.message,
         status: 'error',
         duration: 4000,
@@ -236,13 +202,11 @@ export function useEmployeeDashboard() {
     loadAllData,
     // Terminal Punch
     punch: {
-      isCheckedIn,
+      status: todayStatus,
       actionLoading,
-      checkInTime,
       notes,
       setNotes,
-      onCheckIn: handleCheckIn,
-      onCheckOut: handleCheckOut,
+      onPunch: handlePunch,
     },
     // Metrics
     summary,
@@ -266,7 +230,6 @@ export function useEmployeeDashboard() {
       limit,
       setLimit,
       resetFilters,
-      onCheckOut: handleCheckOut,
     },
     // Modals
     timesheetDisclosure,

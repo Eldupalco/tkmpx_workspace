@@ -5,7 +5,7 @@ import { useToast, useDisclosure } from '@chakra-ui/react';
 import { useAuth, User } from '@/features/auth';
 import {
   fetchAttendances,
-  postCheckOut,
+  postPunch,
   downloadAttendanceCsv,
   Attendance,
   PaginationMeta,
@@ -138,12 +138,13 @@ export function useAdminDashboard() {
   const teamTotalPages = Math.ceil(filteredUsers.length / teamLimit) || 1;
 
   // Handlers
-  const handleAdminCheckOut = async (attendanceId: string) => {
+  // Manager override: records the employee's next punch for today
+  const handleAdminPunch = async (record: Attendance) => {
     if (!token) return;
     try {
-      await postCheckOut(token, attendanceId, 'Manager override punch out');
+      await postPunch(token, 'Manager override punch', record.userId);
       toast({
-        title: 'Check-out updated by manager',
+        title: `Punch recorded for ${record.users?.name || 'employee'}`,
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -151,7 +152,7 @@ export function useAdminDashboard() {
       loadAdminData();
     } catch (err: any) {
       toast({
-        title: 'Check-out update failed',
+        title: 'Punch override failed',
         description: err.message,
         status: 'error',
         duration: 4000,
@@ -246,7 +247,7 @@ export function useAdminDashboard() {
       limit,
       setLimit,
       resetFilters: resetRosterFilters,
-      onCheckOut: handleAdminCheckOut,
+      onPunch: handleAdminPunch,
     },
     // Tab 2 (Live Radar)
     currentlyInList,

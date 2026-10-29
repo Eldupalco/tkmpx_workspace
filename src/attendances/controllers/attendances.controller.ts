@@ -11,6 +11,8 @@ import {
   Request,
   Response,
   ForbiddenException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,8 +26,7 @@ import { CreateAttendanceDto } from '../dto/create-attendance.dto.js';
 import { UpdateAttendanceDto } from '../dto/update-attendance.dto.js';
 import { QueryAttendanceDto } from '../dto/query-attendance.dto.js';
 import {
-  CheckInActionDto,
-  CheckOutActionDto,
+  PunchActionDto,
   LeaveActionDto,
   TimesheetQueryDto,
 } from '../dto/attendance-actions.dto.js';
@@ -115,31 +116,18 @@ export class AttendancesController {
     return res.send(csvContent);
   }
 
-  @Post('check-in')
-  @ApiOperation({ summary: 'Dedicated self check-in punch endpoint' })
-  @ApiResponse({ status: 201, description: 'Checked in successfully' })
-  performCheckIn(@Request() req: any, @Body() dto: CheckInActionDto) {
+  @Post('punch')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record the next punch of the day (Morning In, Morning Out, Afternoon In, Afternoon Out)',
+  })
+  @ApiResponse({ status: 200, description: 'Punch recorded; returns the day record' })
+  @ApiResponse({ status: 400, description: 'On leave, or all four punches already recorded' })
+  @ApiResponse({ status: 409, description: 'Same punch submitted twice at once' })
+  performPunch(@Request() req: any, @Body() dto: PunchActionDto) {
     const targetUserId =
       req.user?.role === 'admin' && dto.userId ? dto.userId : req.user.sub;
-    return this.attendancesService.performCheckIn(targetUserId, dto.notes);
-  }
-
-  @Post(':id/check-out')
-  @ApiOperation({ summary: 'Dedicated punch checkout endpoint' })
-  @ApiParam({ name: 'id', description: 'Attendance identifier' })
-  @ApiResponse({ status: 200, description: 'Checked out successfully' })
-  async performCheckOut(
-    @Request() req: any,
-    @Param('id') id: string,
-    @Body() dto: CheckOutActionDto,
-  ) {
-    if (req.user?.role !== 'admin') {
-      const record = await this.attendancesService.findOne(id);
-      if (record.userId !== req.user.sub) {
-        throw new ForbiddenException('You can only punch out your own attendance');
-      }
-    }
-    return this.attendancesService.performCheckOut(id, dto.notes);
+    return this.attendancesService.performPunch(targetUserId, dto.notes);
   }
 
   @Post('leave')
@@ -159,12 +147,10 @@ export class AttendancesController {
   // --- Standard CRUD Endpoints ---
 
   @Post()
+  @Roles('admin')
   @ApiOperation({ summary: 'Create manual attendance record (Admin backfill)' })
   @ApiResponse({ status: 201, description: 'Created successfully', type: AttendanceView })
-  create(@Body() dto: CreateAttendanceDto, @Request() req: any) {
-    if (req.user?.role !== 'admin') {
-      dto.userId = req.user.sub;
-    }
+  create(@Body() dto: CreateAttendanceDto) {
     return this.attendancesService.create(dto);
   }
 
@@ -191,7 +177,7 @@ export class AttendancesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update attendance record' })
+  @ApiOperation({ summary: 'Update attendance record (non-admins: own notes only)' })
   @ApiParam({ name: 'id', description: 'Attendance identifier' })
   @ApiResponse({ status: 200, description: 'Updated successfully', type: AttendanceView })
   async update(
@@ -203,6 +189,15 @@ export class AttendancesController {
       const record = await this.attendancesService.findOne(id);
       if (record.userId !== req.user.sub) {
         throw new ForbiddenException('You can only update your own attendance records');
+      }
+      // Punch times, status and ownership are admin-controlled to keep timesheets trustworthy
+      const restricted = Object.entries(dto)
+        .filter(([key, value]) => key !== 'notes' && value !== undefined)
+        .map(([key]) => key);
+      if (restricted.length > 0) {
+        throw new ForbiddenException(
+          `Only admins can change: ${restricted.join(', ')}`,
+        );
       }
     }
     return this.attendancesService.update(id, dto);

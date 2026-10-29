@@ -4,14 +4,17 @@ import { AuthController } from './controllers/auth.controller.js';
 import { AuthService } from './services/auth.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { RolesGuard } from './guards/roles.guard.js';
+import { getJwtSecret } from './jwt-secret.js';
 
 @Global()
 @Module({
   imports: [
-    JwtModule.register({
+    JwtModule.registerAsync({
       global: true,
-      secret: process.env.JWT_SECRET || 'tkpex-super-secret-jwt-key',
-      signOptions: { expiresIn: '7d' },
+      useFactory: () => ({
+        secret: getJwtSecret(),
+        signOptions: { expiresIn: '15m' },
+      }),
     }),
   ],
   controllers: [AuthController],

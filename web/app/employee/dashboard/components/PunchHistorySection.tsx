@@ -37,7 +37,6 @@ interface PunchHistorySectionProps {
   setLimit: (l: number) => void;
   resetFilters: () => void;
   onRefresh: () => void;
-  onCheckOut: (id?: string) => void;
 }
 
 export function PunchHistorySection({
@@ -56,7 +55,6 @@ export function PunchHistorySection({
   setLimit,
   resetFilters,
   onRefresh,
-  onCheckOut,
 }: PunchHistorySectionProps) {
   const hasActiveFilters = Boolean(searchTerm || statusFilter !== 'all' || startDate || endDate);
 
@@ -183,7 +181,7 @@ export function PunchHistorySection({
         </Box>
       ) : (
         <>
-          <AttendanceTable records={records} onCheckOut={onCheckOut} />
+          <AttendanceTable records={records} />
           <Pagination
             page={meta.page}
             totalPages={meta.totalPages}

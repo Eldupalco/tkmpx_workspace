@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   Box,
   Button,
@@ -8,6 +9,8 @@ import {
   FormLabel,
   Input,
   VStack,
+  HStack,
+  Flex,
   Heading,
   Text,
   Alert,
@@ -30,9 +33,9 @@ export function LoginForm() {
 
     try {
       await login({ email, password });
+      // Keep the button busy on success: navigation to the dashboard is still in progress
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email or password');
-    } finally {
       setLoading(false);
     }
   };
@@ -86,9 +89,21 @@ export function LoginForm() {
             </FormControl>
 
             <FormControl isRequired>
-              <FormLabel fontSize="11px" fontWeight="bold" textTransform="uppercase" letterSpacing="0.05em" color="slate.600">
-                Password
-              </FormLabel>
+              <Flex justify="space-between" align="center">
+                <FormLabel fontSize="11px" fontWeight="bold" textTransform="uppercase" letterSpacing="0.05em" color="slate.600" mb={1.5}>
+                  Password
+                </FormLabel>
+                <Text
+                  as={Link}
+                  href="/forgot-password"
+                  fontSize="xs"
+                  color="brand.600"
+                  fontWeight="medium"
+                  _hover={{ textDecoration: 'underline' }}
+                >
+                  Forgot password?
+                </Text>
+              </Flex>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -121,6 +136,13 @@ export function LoginForm() {
             </Button>
           </VStack>
         </form>
+
+        <HStack justify="center" fontSize="xs" color="slate.600">
+          <Text>Don&apos;t have an account?</Text>
+          <Text as={Link} href="/register" color="brand.600" fontWeight="bold" _hover={{ textDecoration: 'underline' }}>
+            Register
+          </Text>
+        </HStack>
       </VStack>
     </Box>
   );

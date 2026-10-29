@@ -1,8 +1,8 @@
-import { API_BASE_URL, getAuthHeaders } from '@/lib/api-client';
+import { API_BASE_URL, apiFetch, getAuthHeaders } from '@/lib/api-client';
 import { ShiftSchedule, TodaySchedule, BulkSchedulePayload } from '../types';
 
 export async function fetchMySchedule(token: string): Promise<ShiftSchedule[]> {
-  const res = await fetch(`${API_BASE_URL}/schedules/my-schedule`, {
+  const res = await apiFetch(`${API_BASE_URL}/schedules/my-schedule`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -12,7 +12,7 @@ export async function fetchMySchedule(token: string): Promise<ShiftSchedule[]> {
 }
 
 export async function fetchTodaySchedule(token: string): Promise<TodaySchedule> {
-  const res = await fetch(`${API_BASE_URL}/schedules/today`, {
+  const res = await apiFetch(`${API_BASE_URL}/schedules/today`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -25,7 +25,7 @@ export async function postBulkSchedule(
   token: string,
   data: BulkSchedulePayload
 ) {
-  const res = await fetch(`${API_BASE_URL}/schedules/bulk`, {
+  const res = await apiFetch(`${API_BASE_URL}/schedules/bulk`, {
     method: 'POST',
     headers: getAuthHeaders(token),
     body: JSON.stringify(data),

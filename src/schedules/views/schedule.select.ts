@@ -6,6 +6,8 @@ export const scheduleSelect = {
   dayOfWeek: true,
   startTime: true,
   endTime: true,
+  breakStart: true,
+  breakEnd: true,
   shiftName: true,
   isActive: true,
   createdAt: true,

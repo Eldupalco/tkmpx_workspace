@@ -20,7 +20,8 @@ export interface CurrentlyInUser {
   userName: string;
   userEmail: string;
   userRole: string;
-  checkInTime: string;
+  amIn: string | null;
+  pmIn: string | null;
   durationMinutes: number;
 }
 

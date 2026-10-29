@@ -12,6 +12,7 @@ import { RegisterDto } from '../dto/register.dto.js';
 import { UpdateProfileDto } from '../dto/update-profile.dto.js';
 import { ChangePasswordDto } from '../dto/change-password.dto.js';
 import { ForgotPasswordDto, ResetPasswordDto } from '../dto/password-reset.dto.js';
+import { getJwtSecret } from '../jwt-secret.js';
 import { randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
 
@@ -139,7 +140,7 @@ export class AuthService {
 
     const isCurrentValid = await argon2.verify(user.password, dto.currentPassword);
     if (!isCurrentValid) {
-      throw new UnauthorizedException('Current password does not match');
+      throw new BadRequestException('Current password does not match');
     }
 
     const newHash = await argon2.hash(dto.newPassword);
@@ -167,32 +168,47 @@ export class AuthService {
 
     const resetToken = await this.jwtService.signAsync(
       { sub: user.id, email: user.email, type: 'reset_password' },
-      { expiresIn: '15m' },
+      { expiresIn: '15m', secret: this.resetSecret(user.password) },
     );
 
+    // No email delivery yet: the token is only returned when explicitly enabled for local development
+    if (process.env.EXPOSE_RESET_TOKEN === 'true') {
+      return {
+        message: 'Password reset token generated successfully (valid for 15 minutes)',
+        resetToken,
+      };
+    }
+
     return {
-      message: 'Password reset token generated successfully (valid for 15 minutes)',
-      resetToken,
+      message: 'If an account exists with that email, a reset token has been issued',
     };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    let payload: any;
+    const decoded: any = this.jwtService.decode(dto.resetToken);
+    if (!decoded?.sub || decoded.type !== 'reset_password') {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const user = await this.prisma.users.findUnique({
+      where: { id: decoded.sub },
+    });
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Signed with the current password hash, so the token stops working once the password changes
     try {
-      payload = await this.jwtService.verifyAsync(dto.resetToken, {
-        secret: process.env.JWT_SECRET || 'tkpex-super-secret-jwt-key',
+      await this.jwtService.verifyAsync(dto.resetToken, {
+        secret: this.resetSecret(user.password),
       });
     } catch {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    if (payload.type !== 'reset_password') {
-      throw new BadRequestException('Invalid token type for password reset');
-    }
-
     const newHash = await argon2.hash(dto.newPassword);
     await this.prisma.users.update({
-      where: { id: payload.sub },
+      where: { id: user.id },
       data: {
         password: newHash,
         updatedAt: new Date(),
@@ -200,6 +216,10 @@ export class AuthService {
     });
 
     return { message: 'Password has been successfully reset' };
+  }
+
+  private resetSecret(passwordHash: string) {
+    return `${getJwtSecret()}${passwordHash}`;
   }
 
   private async generateToken(userId: string, email: string, role: string) {

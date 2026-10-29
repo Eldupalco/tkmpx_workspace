@@ -19,14 +19,18 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing authentication token');
     }
 
+    let payload: any;
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET || 'tkpex-super-secret-jwt-key',
-      });
-      (request as any).user = payload;
+      payload = await this.jwtService.verifyAsync(token);
     } catch {
       throw new UnauthorizedException('Invalid or expired authentication token');
     }
+
+    // Purpose-specific tokens (e.g. reset_password) must not grant API access
+    if (payload.type) {
+      throw new UnauthorizedException('Invalid or expired authentication token');
+    }
+    (request as any).user = payload;
 
     return true;
   }

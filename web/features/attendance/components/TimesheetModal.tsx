@@ -198,13 +198,14 @@ export function TimesheetModal({
                       <Th py={2.5} fontSize="10px" color="slate.500" fontWeight="700">DATE</Th>
                       <Th py={2.5} fontSize="10px" color="slate.500" fontWeight="700">HOURS WORKED</Th>
                       <Th py={2.5} fontSize="10px" color="slate.500" fontWeight="700">OVERTIME (&gt;8H)</Th>
+                      <Th py={2.5} fontSize="10px" color="slate.500" fontWeight="700">LATE / UNDERTIME</Th>
                       <Th py={2.5} fontSize="10px" color="slate.500" fontWeight="700">STATUS</Th>
                     </Tr>
                   </Thead>
                   <Tbody>
                     {filteredRecords.length === 0 ? (
                       <Tr>
-                        <Td colSpan={4} textAlign="center" py={6} color="slate.400" fontSize="xs">
+                        <Td colSpan={5} textAlign="center" py={6} color="slate.400" fontSize="xs">
                           No sessions match filter criteria
                         </Td>
                       </Tr>
@@ -225,6 +226,9 @@ export function TimesheetModal({
                             ) : (
                               <Text as="span" color="slate.300">—</Text>
                             )}
+                          </Td>
+                          <Td py={3} fontSize="xs" fontFamily="mono" color={r.lateMinutes || r.undertimeMinutes ? 'amber.700' : 'slate.300'}>
+                            {r.lateMinutes || r.undertimeMinutes ? `${r.lateMinutes} / ${r.undertimeMinutes} min` : '—'}
                           </Td>
                           <Td py={3}>
                             <Badge

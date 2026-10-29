@@ -8,18 +8,25 @@ datasource db {
 }
 
 model attendances {
-  id           String     @id
-  userId       String
-  date         String
-  checkInTime  DateTime   @default(now())
-  checkOutTime DateTime?
-  status       String     @default("present")
-  notes        String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  scheduleId   String?
-  schedules    schedules? @relation(fields: [scheduleId], references: [id])
-  users        users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String     @id
+  userId           String
+  date             String
+  // Daily Time Record: one row per user per day, punched in order AM In -> AM Out -> PM In -> PM Out
+  amIn             DateTime?
+  amOut            DateTime?
+  pmIn             DateTime?
+  pmOut            DateTime?
+  lateMinutes      Int        @default(0)
+  undertimeMinutes Int        @default(0)
+  status           String     @default("present")
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  scheduleId       String?
+  schedules        schedules? @relation(fields: [scheduleId], references: [id])
+  users            users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }
 
 model schedules {
@@ -28,12 +35,16 @@ model schedules {
   dayOfWeek   Int
   startTime   String
   endTime     String
+  breakStart  String        @default("12:00")
+  breakEnd    String        @default("13:00")
   shiftName   String?
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   attendances attendances[]
   users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek])
 }
 
 model users {
@@ -42,7 +53,7 @@ model users {
   email       String        @unique
   password    String
   role        String        @default("user")
-  avatarUrl   String?       // <--- NEW FIELD
+  avatarUrl   String? // <--- NEW FIELD
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   attendances attendances[]

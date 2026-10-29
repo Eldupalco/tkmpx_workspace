@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { CreateScheduleDto } from '../dto/create-schedule.dto.js';
@@ -9,6 +10,7 @@ import { UpdateScheduleDto } from '../dto/update-schedule.dto.js';
 import { QueryScheduleDto } from '../dto/query-schedule.dto.js';
 import { BulkScheduleDto, BulkUsersScheduleDto } from '../dto/bulk-schedule.dto.js';
 import { scheduleSelect } from '../views/schedule.select.js';
+import { isoDayOfWeek } from '../../common/utils/date.util.js';
 import { randomUUID } from 'node:crypto';
 
 const DAY_NAMES = [
@@ -22,11 +24,29 @@ const DAY_NAMES = [
   'Sunday',
 ];
 
+/** Day shift times must run in order: start < breakStart <= breakEnd < end */
+function assertShiftOrder(shift: {
+  startTime: string;
+  endTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+}) {
+  const breakStart = shift.breakStart ?? '12:00';
+  const breakEnd = shift.breakEnd ?? '13:00';
+  // HH:mm strings compare correctly as text
+  if (!(shift.startTime < breakStart && breakStart <= breakEnd && breakEnd < shift.endTime)) {
+    throw new BadRequestException(
+      `Shift times must be in order: startTime (${shift.startTime}) < breakStart (${breakStart}) <= breakEnd (${breakEnd}) < endTime (${shift.endTime})`,
+    );
+  }
+}
+
 @Injectable()
 export class SchedulesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateScheduleDto) {
+    assertShiftOrder(dto);
     try {
       return await (this.prisma as any).schedules.create({
         data: {
@@ -104,7 +124,8 @@ export class SchedulesService {
   }
 
   async update(id: string, dto: UpdateScheduleDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+    assertShiftOrder({ ...existing, ...dto });
     try {
       return await (this.prisma as any).schedules.update({
         where: { id },
@@ -147,9 +168,7 @@ export class SchedulesService {
   }
 
   async getTodaySchedule(userId: string) {
-    const jsDay = new Date().getDay();
-    // Convert JS getDay() (0=Sun, 1=Mon... 6=Sat) to ISO 1..7 (1=Mon.. 7=Sun)
-    const isoDay = jsDay === 0 ? 7 : jsDay;
+    const isoDay = isoDayOfWeek();
 
     const schedule = await (this.prisma as any).schedules.findFirst({
       where: { userId, dayOfWeek: isoDay, isActive: true },
@@ -165,61 +184,47 @@ export class SchedulesService {
   }
 
   async bulkAssign(dto: BulkScheduleDto) {
-    const results = [];
-    for (const day of dto.workDays) {
-      const existing = await (this.prisma as any).schedules.findFirst({
-        where: { userId: dto.userId, dayOfWeek: day },
-      });
-
-      if (existing) {
-        const updated = await (this.prisma as any).schedules.update({
-          where: { id: existing.id },
-          data: {
-            startTime: dto.startTime,
-            endTime: dto.endTime,
-            shiftName: dto.shiftName || 'Standard Shift',
-            isActive: true,
-            updatedAt: new Date(),
-          },
-          select: scheduleSelect,
-        });
-        results.push(updated);
-      } else {
-        const created = await (this.prisma as any).schedules.create({
-          data: {
-            id: randomUUID(),
-            userId: dto.userId,
-            dayOfWeek: day,
-            startTime: dto.startTime,
-            endTime: dto.endTime,
-            shiftName: dto.shiftName || 'Standard Shift',
-            isActive: true,
-            updatedAt: new Date(),
-          },
-          select: scheduleSelect,
-        });
-        results.push(created);
-      }
-    }
+    // All days succeed or none do
+    const results = await this.prisma.$transaction(
+      this.upsertShifts([dto.userId], dto),
+    );
     return { success: true, count: results.length, data: results };
   }
 
   async bulkUsersAssign(dto: BulkUsersScheduleDto) {
-    let totalAssigned = 0;
-    for (const userId of dto.userIds) {
-      await this.bulkAssign({
-        userId,
-        workDays: dto.workDays,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-        shiftName: dto.shiftName,
-      });
-      totalAssigned += dto.workDays.length;
-    }
+    const results = await this.prisma.$transaction(
+      this.upsertShifts(dto.userIds, dto),
+    );
     return {
       success: true,
-      totalUsers: dto.userIds.length,
-      totalAssignedShifts: totalAssigned,
+      totalUsers: new Set(dto.userIds).size,
+      totalAssignedShifts: results.length,
     };
+  }
+
+  private upsertShifts(
+    userIds: string[],
+    shift: Omit<BulkScheduleDto, 'userId'>,
+  ) {
+    assertShiftOrder(shift);
+    const fields = {
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      breakStart: shift.breakStart ?? '12:00',
+      breakEnd: shift.breakEnd ?? '13:00',
+      shiftName: shift.shiftName || 'Standard Shift',
+      isActive: true,
+      updatedAt: new Date(),
+    };
+    return [...new Set(userIds)].flatMap((userId) =>
+      [...new Set(shift.workDays)].map((dayOfWeek) =>
+        this.prisma.schedules.upsert({
+          where: { userId_dayOfWeek: { userId, dayOfWeek } },
+          update: fields,
+          create: { id: randomUUID(), userId, dayOfWeek, ...fields },
+          select: scheduleSelect,
+        }),
+      ),
+    );
   }
 }

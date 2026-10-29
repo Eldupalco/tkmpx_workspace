@@ -21,11 +21,17 @@ export class ScheduleView {
   @ApiProperty({ example: 1 })
   dayOfWeek: number;
 
-  @ApiProperty({ example: 'Sample startTime' })
+  @ApiProperty({ example: '08:00' })
   startTime: string;
 
-  @ApiProperty({ example: 'Sample endTime' })
+  @ApiProperty({ example: '17:00' })
   endTime: string;
+
+  @ApiProperty({ example: '12:00' })
+  breakStart: string;
+
+  @ApiProperty({ example: '13:00' })
+  breakEnd: string;
 
   @ApiProperty({ example: 'Sample shiftName' })
   shiftName: string;

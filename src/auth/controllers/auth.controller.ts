@@ -6,6 +6,8 @@ import {
   Patch,
   UseGuards,
   Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +22,10 @@ import { UpdateProfileDto } from '../dto/update-profile.dto.js';
 import { ChangePasswordDto } from '../dto/change-password.dto.js';
 import { ForgotPasswordDto, ResetPasswordDto } from '../dto/password-reset.dto.js';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard.js';
+import { Throttle } from '@nestjs/throttler';
+
+// Stricter limit for credential endpoints: 5 attempts per minute per IP
+const AUTH_THROTTLE = { default: { limit: 5, ttl: 60_000 } };
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -27,6 +33,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Throttle(AUTH_THROTTLE)
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
@@ -35,6 +42,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(AUTH_THROTTLE)
   @ApiOperation({ summary: 'Authenticate user and return JWT access token' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
@@ -63,16 +72,20 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(AUTH_THROTTLE)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Change password for authenticated user' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
-  @ApiResponse({ status: 401, description: 'Current password invalid' })
+  @ApiResponse({ status: 400, description: 'Current password invalid' })
   changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(req.user.sub, dto);
   }
 
   @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(AUTH_THROTTLE)
   @ApiOperation({ summary: 'Request 15-minute password reset token' })
   @ApiResponse({ status: 200, description: 'Reset token generated' })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -80,6 +93,8 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(AUTH_THROTTLE)
   @ApiOperation({ summary: 'Reset password using valid reset token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   @ApiResponse({ status: 400, description: 'Invalid or expired token' })

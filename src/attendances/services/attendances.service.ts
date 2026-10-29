@@ -9,28 +9,85 @@ import { CreateAttendanceDto } from '../dto/create-attendance.dto.js';
 import { UpdateAttendanceDto } from '../dto/update-attendance.dto.js';
 import { QueryAttendanceDto } from '../dto/query-attendance.dto.js';
 import { attendanceSelect } from '../views/attendance.select.js';
+import {
+  currentTime,
+  dateRangeFilter,
+  isoDayOfDate,
+  todayDate,
+} from '../../common/utils/date.util.js';
+import {
+  DEFAULT_BREAK,
+  LEAVE_STATUSES,
+  PUNCH_COOLDOWN_SECONDS,
+  PUNCH_LABELS,
+  PUNCH_ORDER,
+  Punches,
+  secondsSinceLastPunch,
+  hoursWorked,
+  isWorking,
+  nextPunch,
+  punchMetrics,
+  punchStatus,
+} from './punch.rules.js';
 import { randomUUID } from 'node:crypto';
+
+const notOnLeave = { status: { notIn: LEAVE_STATUSES } };
+const STANDARD_HOURS = 8;
+
+function csvCell(value: unknown): string {
+  let text = value === null || value === undefined ? '' : String(value);
+  // Neutralise spreadsheet formulas (CSV injection)
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function punchTime(value?: Date | string | null): string {
+  return value ? currentTime(new Date(value)) : '';
+}
 
 @Injectable()
 export class AttendancesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Active shift for a user on a business date (used for late/undertime rules) */
+  private async shiftFor(userId: string, date: string) {
+    return (this.prisma as any).schedules.findFirst({
+      where: { userId, dayOfWeek: isoDayOfDate(date), isActive: true },
+    });
+  }
+
+  /** Recomputes lateMinutes, undertimeMinutes and status from the punches */
+  private async withMetrics(
+    userId: string,
+    date: string,
+    punches: Punches,
+    status?: string,
+    explicitStatus = false,
+  ) {
+    const shift = await this.shiftFor(userId, date);
+    const metrics = punchMetrics(punches, shift);
+    return {
+      ...metrics,
+      status: explicitStatus && status ? status : punchStatus(punches, metrics.lateMinutes, status),
+      ...(shift ? { scheduleId: shift.id } : {}),
+    };
+  }
+
   async create(dto: CreateAttendanceDto) {
+    const derived = await this.withMetrics(dto.userId, dto.date, dto, dto.status, Boolean(dto.status));
     try {
       return await (this.prisma as any).attendances.create({
         data: {
           id: randomUUID(),
           ...dto,
+          ...derived,
           updatedAt: new Date(),
         },
         select: attendanceSelect,
       });
     } catch (error: any) {
       if (error?.code === 'P2002') {
-        const target = error.meta?.target ? ` (${error.meta.target})` : '';
-        throw new ConflictException(
-          `A record with this unique field already exists${target}`,
-        );
+        throw new ConflictException(`An attendance record already exists for ${dto.date}`);
       }
       throw error;
     }
@@ -80,9 +137,11 @@ export class AttendancesService {
     // 4. Status filter (case-insensitive + normalizes leave/on_leave)
     if (query?.status && query.status.trim() && query.status.toLowerCase() !== 'all') {
       const s = query.status.trim().toLowerCase();
-      if (s === 'leave' || s === 'on_leave') {
+      if (LEAVE_STATUSES.includes(s)) {
         andConditions.push({
-          status: { in: ['leave', 'on_leave', 'Leave', 'On_Leave', 'ON_LEAVE'] },
+          OR: LEAVE_STATUSES.map((leave) => ({
+            status: { equals: leave, mode: 'insensitive' },
+          })),
         });
       } else {
         andConditions.push({
@@ -94,15 +153,9 @@ export class AttendancesService {
     // 5. Date and Date Range filter
     if (query?.date && query.date.trim()) {
       andConditions.push({ date: query.date.trim() });
-    } else if (query?.startDate || query?.endDate) {
-      const dateRange: any = {};
-      if (query.startDate && query.startDate.trim()) {
-        dateRange.gte = query.startDate.trim();
-      }
-      if (query.endDate && query.endDate.trim()) {
-        dateRange.lte = query.endDate.trim();
-      }
-      andConditions.push({ date: dateRange });
+    } else {
+      const dateRange = dateRangeFilter(query?.startDate, query?.endDate);
+      if (dateRange) andConditions.push({ date: dateRange });
     }
 
     if (andConditions.length > 0) {
@@ -147,22 +200,32 @@ export class AttendancesService {
   }
 
   async update(id: string, dto: UpdateAttendanceDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+    const merged = { ...existing, ...dto };
+    const touchesPunches = PUNCH_ORDER.some((slot) => dto[slot] !== undefined);
+    const derived =
+      touchesPunches || dto.status !== undefined
+        ? await this.withMetrics(
+            merged.userId,
+            merged.date,
+            merged,
+            merged.status,
+            dto.status !== undefined,
+          )
+        : {};
     try {
       return await (this.prisma as any).attendances.update({
         where: { id },
         data: {
           ...dto,
+          ...derived,
           updatedAt: new Date(),
         },
         select: attendanceSelect,
       });
     } catch (error: any) {
       if (error?.code === 'P2002') {
-        const target = error.meta?.target ? ` (${error.meta.target})` : '';
-        throw new ConflictException(
-          `A record with this unique field already exists${target}`,
-        );
+        throw new ConflictException(`An attendance record already exists for ${merged.date}`);
       }
       throw error;
     }
@@ -174,42 +237,60 @@ export class AttendancesService {
     return { success: true, message: `Attendance #${id} removed` };
   }
 
-  // --- Specialized Workflow Operations from RBAC Guide ---
+  // --- Daily Time Record workflow ---
 
   async getTodayStatus(userId: string) {
-    const today = new Date().toISOString().split('T')[0];
-    const record = await (this.prisma as any).attendances.findFirst({
-      where: { userId, date: today },
-      orderBy: { createdAt: 'desc' },
-      select: attendanceSelect,
-    });
+    const now = new Date();
+    const today = todayDate(now);
+    const [record, shift] = await Promise.all([
+      (this.prisma as any).attendances.findUnique({
+        where: { userId_date: { userId, date: today } },
+        select: attendanceSelect,
+      }),
+      this.shiftFor(userId, today),
+    ]);
 
-    const hasCheckedIn = Boolean(record && record.checkInTime);
-    const hasCheckedOut = Boolean(record && record.checkOutTime);
+    const onLeave = Boolean(record && LEAVE_STATUSES.includes(record.status));
+    const next = onLeave
+      ? null
+      : nextPunch(record, currentTime(now), shift?.breakStart ?? DEFAULT_BREAK.breakStart);
 
     return {
       today,
-      hasCheckedIn,
-      hasCheckedOut,
-      canCheckIn: !hasCheckedIn,
-      canCheckOut: hasCheckedIn && !hasCheckedOut,
+      onLeave,
+      isWorking: !onLeave && isWorking(record),
+      completed: !onLeave && Boolean(record) && next === null,
+      nextPunch: next,
+      nextPunchLabel: next ? PUNCH_LABELS[next] : null,
+      hoursWorked: record && !onLeave ? hoursWorked(record) : 0,
+      shift: shift
+        ? {
+            startTime: shift.startTime,
+            breakStart: shift.breakStart,
+            breakEnd: shift.breakEnd,
+            endTime: shift.endTime,
+          }
+        : null,
       record: record || null,
     };
   }
 
   async getCurrentlyIn() {
-    const today = new Date().toISOString().split('T')[0];
     return await (this.prisma as any).attendances.findMany({
       where: {
-        date: today,
-        checkOutTime: null,
+        date: todayDate(),
+        ...notOnLeave,
+        OR: [
+          { amIn: { not: null }, amOut: null, pmIn: null },
+          { pmIn: { not: null }, pmOut: null },
+        ],
       },
       select: attendanceSelect,
     });
   }
 
   async getDashboardMetrics() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayDate();
 
     const [totalEmployees, todayAttendances] = await Promise.all([
       (this.prisma as any).users.count(),
@@ -218,12 +299,14 @@ export class AttendancesService {
       }),
     ]);
 
-    const checkedInToday = todayAttendances.filter((a: any) => Boolean(a.checkInTime)).length;
-    const currentlyWorking = todayAttendances.filter(
-      (a: any) => Boolean(a.checkInTime) && !a.checkOutTime,
-    ).length;
-    const lateToday = todayAttendances.filter((a: any) => a.status === 'late').length;
-    const onLeaveToday = todayAttendances.filter((a: any) => a.status === 'on_leave').length;
+    // One row per user per day, so row counts are people counts
+    const isLeave = (a: any) => LEAVE_STATUSES.includes(a.status);
+    const count = (predicate: (a: any) => boolean) => todayAttendances.filter(predicate).length;
+
+    const checkedInToday = count((a) => !isLeave(a) && Boolean(a.amIn || a.pmIn));
+    const currentlyWorking = count((a) => !isLeave(a) && isWorking(a));
+    const lateToday = count((a) => a.lateMinutes > 0);
+    const onLeaveToday = count(isLeave);
     const notPunchedYet = Math.max(0, totalEmployees - checkedInToday - onLeaveToday);
 
     return {
@@ -250,6 +333,7 @@ export class AttendancesService {
       total: records.length,
       present: 0,
       late: 0,
+      halfDay: 0,
       absent: 0,
       onLeave: 0,
     };
@@ -257,8 +341,9 @@ export class AttendancesService {
     for (const r of records) {
       if (r.status === 'present') summary.present++;
       else if (r.status === 'late') summary.late++;
+      else if (r.status === 'half_day') summary.halfDay++;
       else if (r.status === 'absent') summary.absent++;
-      else if (r.status === 'on_leave' || r.status === 'leave') summary.onLeave++;
+      else if (LEAVE_STATUSES.includes(r.status)) summary.onLeave++;
     }
 
     return summary;
@@ -266,9 +351,8 @@ export class AttendancesService {
 
   async getTimesheet(userId: string, startDate?: string, endDate?: string) {
     const where: any = { userId };
-    if (startDate && endDate) {
-      where.date = { gte: startDate, lte: endDate };
-    }
+    const dateRange = dateRangeFilter(startDate, endDate);
+    if (dateRange) where.date = dateRange;
 
     const records = await (this.prisma as any).attendances.findMany({
       where,
@@ -279,28 +363,30 @@ export class AttendancesService {
     let totalHours = 0;
     let overtimeHours = 0;
     let daysWorked = 0;
+    let totalLateMinutes = 0;
+    let totalUndertimeMinutes = 0;
 
     const days = records.map((rec: any) => {
-      let hours = 0;
-      if (rec.checkInTime && rec.checkOutTime) {
-        const diffMs =
-          new Date(rec.checkOutTime).getTime() - new Date(rec.checkInTime).getTime();
-        hours = Math.max(0, Number((diffMs / (1000 * 60 * 60)).toFixed(2)));
-        totalHours += hours;
-        daysWorked++;
-        if (hours > 8) {
-          overtimeHours += hours - 8;
-        }
-      }
+      const hours = hoursWorked(rec);
+      const overtime = Math.max(0, Number((hours - STANDARD_HOURS).toFixed(2)));
+      if (hours > 0) daysWorked++;
+      totalHours += hours;
+      overtimeHours += overtime;
+      totalLateMinutes += rec.lateMinutes;
+      totalUndertimeMinutes += rec.undertimeMinutes;
 
       return {
         id: rec.id,
         date: rec.date,
-        checkInTime: rec.checkInTime,
-        checkOutTime: rec.checkOutTime,
+        amIn: rec.amIn,
+        amOut: rec.amOut,
+        pmIn: rec.pmIn,
+        pmOut: rec.pmOut,
         status: rec.status,
         hoursWorked: hours,
-        overtime: hours > 8 ? Number((hours - 8).toFixed(2)) : 0,
+        overtime,
+        lateMinutes: rec.lateMinutes,
+        undertimeMinutes: rec.undertimeMinutes,
       };
     });
 
@@ -314,6 +400,8 @@ export class AttendancesService {
         overtimeHours: Number(overtimeHours.toFixed(2)),
         averageHoursPerDay:
           daysWorked > 0 ? Number((totalHours / daysWorked).toFixed(2)) : 0,
+        totalLateMinutes,
+        totalUndertimeMinutes,
       },
       records: days,
     };
@@ -322,7 +410,8 @@ export class AttendancesService {
   async exportCsv(userId?: string, startDate?: string, endDate?: string): Promise<string> {
     const where: any = {};
     if (userId) where.userId = userId;
-    if (startDate && endDate) where.date = { gte: startDate, lte: endDate };
+    const dateRange = dateRangeFilter(startDate, endDate);
+    if (dateRange) where.date = dateRange;
 
     const records = await (this.prisma as any).attendances.findMany({
       where,
@@ -330,59 +419,109 @@ export class AttendancesService {
       select: attendanceSelect,
     });
 
-    const headers = ['ID', 'Date', 'User Name', 'User Email', 'Check In', 'Check Out', 'Status', 'Notes'];
+    const headers = [
+      'ID', 'Date', 'User Name', 'User Email',
+      'AM In', 'AM Out', 'PM In', 'PM Out',
+      'Hours', 'Late (min)', 'Undertime (min)', 'Status', 'Notes',
+    ];
     const rows = records.map((r: any) => [
       r.id,
       r.date,
-      `"${r.users?.name || ''}"`,
-      `"${r.users?.email || ''}"`,
-      r.checkInTime ? new Date(r.checkInTime).toISOString() : '',
-      r.checkOutTime ? new Date(r.checkOutTime).toISOString() : '',
+      r.users?.name,
+      r.users?.email,
+      punchTime(r.amIn),
+      punchTime(r.amOut),
+      punchTime(r.pmIn),
+      punchTime(r.pmOut),
+      hoursWorked(r),
+      r.lateMinutes,
+      r.undertimeMinutes,
       r.status,
-      `"${(r.notes || '').replace(/"/g, '""')}"`,
+      r.notes,
     ]);
 
-    return [headers.join(','), ...rows.map((row: any) => row.join(','))].join('\n');
+    return [headers, ...rows]
+      .map((row: unknown[]) => row.map(csvCell).join(','))
+      .join('\r\n');
   }
 
-  async performCheckIn(userId: string, notes?: string) {
-    const today = new Date().toISOString().split('T')[0];
-    const existing = await (this.prisma as any).attendances.findFirst({
-      where: { userId, date: today },
-    });
+  /** Records the next punch of the day: AM In -> AM Out -> PM In -> PM Out */
+  async performPunch(userId: string, notes?: string) {
+    const now = new Date();
+    const today = todayDate(now);
 
-    if (existing && !existing.checkOutTime) {
-      throw new BadRequestException('You are already checked in for today');
+    const [record, shift] = await Promise.all([
+      (this.prisma as any).attendances.findUnique({
+        where: { userId_date: { userId, date: today } },
+      }),
+      this.shiftFor(userId, today),
+    ]);
+
+    if (record && LEAVE_STATUSES.includes(record.status)) {
+      throw new BadRequestException('You are on leave today');
     }
 
-    return await this.create({
-      userId,
-      date: today,
-      checkInTime: new Date().toISOString(),
-      status: 'present',
-      notes: notes || 'Checked in via portal',
-    });
-  }
-
-  async performCheckOut(id: string, notes?: string) {
-    const item = await this.findOne(id);
-    if (item.checkOutTime) {
-      throw new BadRequestException('Attendance has already been checked out');
+    const slot = nextPunch(
+      record,
+      currentTime(now),
+      shift?.breakStart ?? DEFAULT_BREAK.breakStart,
+    );
+    if (!slot) {
+      throw new BadRequestException('All four punches for today are already recorded');
+    }
+    const sinceLast = secondsSinceLastPunch(record, now);
+    if (sinceLast !== null && sinceLast < PUNCH_COOLDOWN_SECONDS) {
+      throw new ConflictException(
+        `Last punch was ${Math.floor(sinceLast)}s ago; wait ${PUNCH_COOLDOWN_SECONDS}s between punches`,
+      );
     }
 
-    return await this.update(id, {
-      checkOutTime: new Date().toISOString(),
-      ...(notes ? { notes: item.notes ? `${item.notes} | ${notes}` : notes } : {}),
+    const punches = { ...record, [slot]: now };
+    const metrics = punchMetrics(punches, shift);
+    const data = {
+      [slot]: now,
+      ...metrics,
+      status: punchStatus(punches, metrics.lateMinutes, record?.status),
+      ...(shift ? { scheduleId: shift.id } : {}),
+      updatedAt: now,
+    };
+    const note = notes?.trim();
+
+    if (!record) {
+      // Unique (userId, date): a concurrent first punch fails with 409 instead of duplicating the day
+      return await (this.prisma as any).attendances.create({
+        data: { id: randomUUID(), userId, date: today, notes: note || null, ...data },
+        select: attendanceSelect,
+      });
+    }
+
+    // Only write if the slot is still empty, so two simultaneous punches cannot both land
+    const { count } = await (this.prisma as any).attendances.updateMany({
+      where: { id: record.id, [slot]: null },
+      data: {
+        ...data,
+        ...(note ? { notes: record.notes ? `${record.notes} | ${note}` : note } : {}),
+      },
     });
+    if (count === 0) {
+      throw new ConflictException(`${PUNCH_LABELS[slot]} was already recorded`);
+    }
+    return this.findOne(record.id);
   }
 
   async recordLeave(userId: string, date: string, status = 'on_leave', notes?: string) {
+    const existing = await (this.prisma as any).attendances.findUnique({
+      where: { userId_date: { userId, date } },
+    });
+    if (existing) {
+      throw new ConflictException(`An attendance or leave record already exists for ${date}`);
+    }
+
     return await (this.prisma as any).attendances.create({
       data: {
         id: randomUUID(),
         userId,
         date,
-        checkInTime: new Date(),
         status,
         notes: notes || 'Approved leave request',
         updatedAt: new Date(),

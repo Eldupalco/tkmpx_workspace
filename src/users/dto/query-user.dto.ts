@@ -30,9 +30,13 @@ export class QueryUserDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Sort column', default: 'createdAt' })
+  @ApiPropertyOptional({
+    description: 'Sort column',
+    enum: ['name', 'email', 'role', 'createdAt', 'updatedAt'],
+    default: 'createdAt',
+  })
   @IsOptional()
-  @IsString()
+  @IsIn(['name', 'email', 'role', 'createdAt', 'updatedAt'])
   sortBy?: string = 'createdAt';
 
   @ApiPropertyOptional({

@@ -1,9 +1,20 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, LoginCredentials } from '../types';
 import { loginUser, fetchUserProfile } from '../api/auth.api';
+import { setUnauthorizedHandler } from '@/lib/api-client';
+
+/** Milliseconds until the JWT's `exp` claim, or null if it cannot be read */
+function msUntilExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 - Date.now() : null;
+  } catch {
+    return null;
+  }
+}
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +28,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -30,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const savedUserStr = localStorage.getItem('auth_user');
 
         if (savedToken && savedUserStr) {
+
           setToken(savedToken);
           setUser(JSON.parse(savedUserStr));
 
@@ -54,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     restoreSession();
+
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
@@ -67,25 +81,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem('auth_token', accessToken);
       localStorage.setItem('auth_user', JSON.stringify(authUser));
-
-      // Redirect user to their role-specific dashboard
-      if (authUser.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/employee/dashboard');
-      }
+      // The login page redirects to the role dashboard once `user` is set
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
-    router.push('/login');
-  };
+    router.replace('/login');
+  }, [router]);
+
+  // Any API call rejected with 401 (expired or invalid token) ends the session
+  useEffect(() => {
+    setUnauthorizedHandler(logout);
+    return () => setUnauthorizedHandler(null);
+  }, [logout]);
+
+  // Also log out exactly when the token expires, even if no request is made
+  useEffect(() => {
+    if (!token) return;
+    const remaining = msUntilExpiry(token);
+    if (remaining === null) return;
+    const timer = setTimeout(logout, Math.max(0, remaining));
+    return () => clearTimeout(timer);
+  }, [token, logout]);
 
   const updateUser = (updated: User) => {
     setUser(updated);

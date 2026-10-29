@@ -84,7 +84,7 @@ async function main() {
       userId: employeeUser.id,
       scheduleId: schedule1.id,
       date: new Date().toISOString().slice(0, 10),
-      checkInTime: new Date(),
+      amIn: new Date(),
       status: 'present',
       notes: 'On-time arrival',
       updatedAt: new Date(),

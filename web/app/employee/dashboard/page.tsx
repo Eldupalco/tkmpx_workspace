@@ -75,13 +75,11 @@ function EmployeeDashboardContent() {
 
           {/* 2. Clock-In / Clock-Out Punch Terminal */}
           <PunchTerminalCard
-            isCheckedIn={punch.isCheckedIn}
+            status={punch.status}
             isLoading={punch.actionLoading}
-            lastCheckInTime={punch.checkInTime}
             notes={punch.notes}
             setNotes={punch.setNotes}
-            onCheckIn={punch.onCheckIn}
-            onCheckOut={punch.onCheckOut}
+            onPunch={punch.onPunch}
           />
 
           {/* 3. Metric Summary Cards */}
@@ -111,7 +109,6 @@ function EmployeeDashboardContent() {
             setLimit={history.setLimit}
             resetFilters={history.resetFilters}
             onRefresh={loadAllData}
-            onCheckOut={history.onCheckOut}
           />
         </VStack>
       </Container>

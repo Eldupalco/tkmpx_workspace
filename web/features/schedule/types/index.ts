@@ -5,6 +5,8 @@ export interface ShiftSchedule {
   dayName: string;
   startTime: string;
   endTime: string;
+  breakStart: string;
+  breakEnd: string;
   shiftName?: string;
   isActive: boolean;
 }
@@ -21,6 +23,8 @@ export interface BulkSchedulePayload {
   workDays: number[];
   startTime: string;
   endTime: string;
+  breakStart?: string;
+  breakEnd?: string;
   shiftName?: string;
 }
 

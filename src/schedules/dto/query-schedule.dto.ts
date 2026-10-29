@@ -30,9 +30,13 @@ export class QueryScheduleDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Sort column', default: 'createdAt' })
+  @ApiPropertyOptional({
+    description: 'Sort column',
+    enum: ['dayOfWeek', 'startTime', 'endTime', 'shiftName', 'isActive', 'createdAt', 'updatedAt'],
+    default: 'createdAt',
+  })
   @IsOptional()
-  @IsString()
+  @IsIn(['dayOfWeek', 'startTime', 'endTime', 'shiftName', 'isActive', 'createdAt', 'updatedAt'])
   sortBy?: string = 'createdAt';
 
   @ApiPropertyOptional({

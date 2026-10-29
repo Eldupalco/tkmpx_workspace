@@ -32,11 +32,23 @@ export class AttendanceView {
   @ApiProperty({ example: 'Sample date' })
   date: string;
 
-  @ApiProperty({ example: '2026-10-28T12:00:00.000Z' })
-  checkInTime: Date | string;
+  @ApiPropertyOptional({ example: '2026-10-29T00:00:00.000Z', nullable: true })
+  amIn: Date | string | null;
 
-  @ApiProperty({ example: '2026-10-28T12:00:00.000Z' })
-  checkOutTime: Date | string;
+  @ApiPropertyOptional({ example: '2026-10-29T00:00:00.000Z', nullable: true })
+  amOut: Date | string | null;
+
+  @ApiPropertyOptional({ example: '2026-10-29T00:00:00.000Z', nullable: true })
+  pmIn: Date | string | null;
+
+  @ApiPropertyOptional({ example: '2026-10-29T00:00:00.000Z', nullable: true })
+  pmOut: Date | string | null;
+
+  @ApiProperty({ example: 0 })
+  lateMinutes: number;
+
+  @ApiProperty({ example: 0 })
+  undertimeMinutes: number;
 
   @ApiProperty({ example: 'Sample status' })
   status: string;

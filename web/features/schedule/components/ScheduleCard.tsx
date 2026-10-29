@@ -61,7 +61,7 @@ export function ScheduleCard({ shifts, todayShift }: ScheduleCardProps) {
             >
               Today ({todayShift.dayName}):{' '}
               {todayShift.hasShiftToday && todayShift.schedule
-                ? `${todayShift.schedule.startTime} – ${todayShift.schedule.endTime}`
+                ? `${todayShift.schedule.startTime} – ${todayShift.schedule.endTime} (break ${todayShift.schedule.breakStart}–${todayShift.schedule.breakEnd})`
                 : 'No Shift'}
             </Text>
           </HStack>
@@ -113,7 +113,7 @@ export function ScheduleCard({ shifts, todayShift }: ScheduleCardProps) {
                   fontFamily="mono"
                   mt={1}
                 >
-                  {s.startTime} – {s.endTime}
+                  {s.startTime} – {s.endTime} · break {s.breakStart}–{s.breakEnd}
                 </Text>
                 <Text fontSize="10px" color="slate.400" mt={0.5} noOfLines={1}>
                   {s.shiftName || 'Standard'}

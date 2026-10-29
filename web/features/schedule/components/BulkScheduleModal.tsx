@@ -55,6 +55,8 @@ export function BulkScheduleModal({
   const [workDays, setWorkDays] = useState<string[]>(['1', '2', '3', '4', '5']);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
+  const [breakStart, setBreakStart] = useState('12:00');
+  const [breakEnd, setBreakEnd] = useState('13:00');
   const [shiftName, setShiftName] = useState('Standard Shift');
   const [loading, setLoading] = useState(false);
 
@@ -69,6 +71,8 @@ export function BulkScheduleModal({
         workDays: workDays.map(Number),
         startTime,
         endTime,
+        breakStart,
+        breakEnd,
         shiftName,
       });
 
@@ -181,6 +185,38 @@ export function BulkScheduleModal({
                     fontSize="sm"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </FormControl>
+              </Stack>
+
+              <Stack direction={['column', 'row']} spacing={3}>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="slate.600">
+                    Lunch Break Start
+                  </FormLabel>
+                  <Input
+                    type="time"
+                    borderRadius="lg"
+                    bg="slate.50"
+                    borderColor="slate.200"
+                    fontSize="sm"
+                    value={breakStart}
+                    onChange={(e) => setBreakStart(e.target.value)}
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="slate.600">
+                    Lunch Break End
+                  </FormLabel>
+                  <Input
+                    type="time"
+                    borderRadius="lg"
+                    bg="slate.50"
+                    borderColor="slate.200"
+                    fontSize="sm"
+                    value={breakEnd}
+                    onChange={(e) => setBreakEnd(e.target.value)}
                   />
                 </FormControl>
               </Stack>

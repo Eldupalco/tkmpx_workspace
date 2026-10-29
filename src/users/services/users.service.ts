@@ -122,6 +122,7 @@ export class UsersService {
     await this.findOne(id);
     return (this.prisma as any).users.delete({
       where: { id },
+      select: userSelect,
     });
   }
 }

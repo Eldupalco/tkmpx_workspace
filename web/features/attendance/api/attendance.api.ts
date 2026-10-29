@@ -1,9 +1,10 @@
-import { API_BASE_URL, getAuthHeaders } from '@/lib/api-client';
+import { API_BASE_URL, apiFetch, getAuthHeaders } from '@/lib/api-client';
 import {
   Attendance,
   PaginatedResponse,
   FetchAttendanceParams,
   TimesheetData,
+  TodayPunchStatus,
 } from '../types';
 
 export async function fetchAttendances({
@@ -31,7 +32,7 @@ export async function fetchAttendances({
   if (startDate && startDate.trim()) queryParams.set('startDate', startDate.trim());
   if (endDate && endDate.trim()) queryParams.set('endDate', endDate.trim());
 
-  const res = await fetch(`${API_BASE_URL}/attendances?${queryParams.toString()}`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances?${queryParams.toString()}`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -56,9 +57,9 @@ export async function fetchAttendances({
   return { data: [], meta: { total: 0, page: 1, limit, totalPages: 1 } };
 }
 
-export async function fetchTodayStatus(token: string, userId?: string) {
+export async function fetchTodayStatus(token: string, userId?: string): Promise<TodayPunchStatus> {
   const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-  const res = await fetch(`${API_BASE_URL}/attendances/today-status${query}`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/today-status${query}`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -69,7 +70,7 @@ export async function fetchTodayStatus(token: string, userId?: string) {
 
 export async function fetchAttendanceSummary(token: string, userId?: string) {
   const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-  const res = await fetch(`${API_BASE_URL}/attendances/summary${query}`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/summary${query}`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -87,7 +88,7 @@ export async function fetchTimesheet(
   if (params?.endDate) query.set('endDate', params.endDate);
   if (params?.userId) query.set('userId', params.userId);
 
-  const res = await fetch(`${API_BASE_URL}/attendances/timesheet?${query.toString()}`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/timesheet?${query.toString()}`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -96,33 +97,17 @@ export async function fetchTimesheet(
   return json.data;
 }
 
-export async function postCheckIn(token: string, notes?: string): Promise<Attendance> {
-  const res = await fetch(`${API_BASE_URL}/attendances/check-in`, {
+/** Records the next punch of the day: Morning In, Morning Out, Afternoon In, Afternoon Out */
+export async function postPunch(token: string, notes?: string, userId?: string): Promise<Attendance> {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/punch`, {
     method: 'POST',
     headers: getAuthHeaders(token),
-    body: JSON.stringify({ notes }),
+    // userId is honoured only for admins (punch on behalf of an employee)
+    body: JSON.stringify({ ...(notes ? { notes } : {}), ...(userId ? { userId } : {}) }),
   });
   if (!res.ok) {
     const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Check-in failed');
-  }
-  const json = await res.json();
-  return json.data;
-}
-
-export async function postCheckOut(
-  token: string,
-  attendanceId: string,
-  notes?: string
-): Promise<Attendance> {
-  const res = await fetch(`${API_BASE_URL}/attendances/${attendanceId}/check-out`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify({ notes }),
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.message || 'Check-out failed');
+    throw new Error(errorJson?.message || 'Punch failed');
   }
   const json = await res.json();
   return json.data;
@@ -132,7 +117,7 @@ export async function postLeaveRequest(
   token: string,
   data: { date: string; status?: string; notes?: string; userId?: string }
 ) {
-  const res = await fetch(`${API_BASE_URL}/attendances/leave`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/leave`, {
     method: 'POST',
     headers: getAuthHeaders(token),
     body: JSON.stringify(data),
@@ -160,7 +145,7 @@ export function downloadAttendanceCsv(
   const qs = query.toString() ? `?${query.toString()}` : '';
   const url = `${API_BASE_URL}/attendances/export${qs}`;
 
-  fetch(url, { headers: getAuthHeaders(token) })
+  apiFetch(url, { headers: getAuthHeaders(token) })
     .then((res) => res.blob())
     .then((blob) => {
       const downloadUrl = window.URL.createObjectURL(blob);

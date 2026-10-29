@@ -1,4 +1,4 @@
-import { API_BASE_URL, getAuthHeaders } from '@/lib/api-client';
+import { API_BASE_URL, apiFetch, getAuthHeaders } from '@/lib/api-client';
 import { User } from '@/features/auth/types';
 import { Attendance } from '@/features/attendance/types';
 import {
@@ -9,7 +9,7 @@ import {
 
 export async function fetchUsers(token?: string): Promise<User[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/users?limit=50`, {
+    const res = await apiFetch(`${API_BASE_URL}/users?limit=50`, {
       headers: getAuthHeaders(token),
       cache: 'no-store',
     });
@@ -26,7 +26,7 @@ export async function createUser(
   token: string,
   data: CreateUserPayload
 ): Promise<User> {
-  const res = await fetch(`${API_BASE_URL}/users`, {
+  const res = await apiFetch(`${API_BASE_URL}/users`, {
     method: 'POST',
     headers: getAuthHeaders(token),
     body: JSON.stringify(data),
@@ -44,7 +44,7 @@ export async function updateUser(
   id: string,
   data: UpdateUserPayload
 ): Promise<User> {
-  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+  const res = await apiFetch(`${API_BASE_URL}/users/${id}`, {
     method: 'PATCH',
     headers: getAuthHeaders(token),
     body: JSON.stringify(data),
@@ -58,7 +58,7 @@ export async function updateUser(
 }
 
 export async function deleteUser(token: string, id: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+  const res = await apiFetch(`${API_BASE_URL}/users/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(token),
   });
@@ -69,7 +69,7 @@ export async function deleteUser(token: string, id: string): Promise<void> {
 }
 
 export async function fetchCurrentlyIn(token: string): Promise<Attendance[]> {
-  const res = await fetch(`${API_BASE_URL}/attendances/currently-in`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/currently-in`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
@@ -79,7 +79,7 @@ export async function fetchCurrentlyIn(token: string): Promise<Attendance[]> {
 }
 
 export async function fetchDashboardMetrics(token: string): Promise<DashboardMetrics> {
-  const res = await fetch(`${API_BASE_URL}/attendances/dashboard`, {
+  const res = await apiFetch(`${API_BASE_URL}/attendances/dashboard`, {
     headers: getAuthHeaders(token),
     cache: 'no-store',
   });
