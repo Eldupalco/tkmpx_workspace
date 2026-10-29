@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'user@tkpex.com' })
@@ -9,10 +9,20 @@ export class ForgotPasswordDto {
 }
 
 export class ResetPasswordDto {
-  @ApiProperty({ example: 'eyJhbGciOi...' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ example: 'eyJhbGciOi...' })
+  @IsOptional()
   @IsString()
-  resetToken: string;
+  resetToken?: string;
+
+  @ApiPropertyOptional({ example: 'eyJhbGciOi...', description: 'Fallback alias for resetToken' })
+  @IsOptional()
+  @IsString()
+  token?: string;
+
+  @ApiPropertyOptional({ example: 'user@tkpex.com', description: 'Optional email' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @ApiProperty({ example: 'brandNewPassword123!' })
   @IsNotEmpty()

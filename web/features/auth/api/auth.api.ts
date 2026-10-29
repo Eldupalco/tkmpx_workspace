@@ -92,14 +92,19 @@ export async function requestForgotPassword(email: string): Promise<{ message: s
 }
 
 export async function resetPasswordWithToken(data: {
-  email: string;
-  token: string;
+  resetToken?: string;
+  token?: string;
   newPassword: string;
+  email?: string;
 }): Promise<{ message: string }> {
+  const resetToken = data.resetToken || data.token;
   const res = await apiFetch(`${API_BASE_URL}/auth/reset-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      resetToken,
+      newPassword: data.newPassword,
+    }),
   });
   if (!res.ok) {
     const errorJson = await res.json().catch(() => null);

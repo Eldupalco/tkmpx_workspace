@@ -56,7 +56,7 @@ export function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      await resetPasswordWithToken({ email, token, newPassword });
+      await resetPasswordWithToken({ resetToken: token, newPassword });
       toast({
         title: 'Password Reset Successful',
         description: 'You can now sign in with your new password.',
@@ -157,7 +157,7 @@ export function ForgotPasswordForm() {
                 </FormLabel>
                 <Input
                   type="text"
-                  placeholder="Enter 64-char token"
+                  placeholder="Paste reset token"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   focusBorderColor="brand.500"

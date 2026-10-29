@@ -185,7 +185,12 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const decoded: any = this.jwtService.decode(dto.resetToken);
+    const rawToken = dto.resetToken || dto.token;
+    if (!rawToken) {
+      throw new BadRequestException('Reset token is required');
+    }
+
+    const decoded: any = this.jwtService.decode(rawToken);
     if (!decoded?.sub || decoded.type !== 'reset_password') {
       throw new BadRequestException('Invalid or expired reset token');
     }
@@ -199,7 +204,7 @@ export class AuthService {
 
     // Signed with the current password hash, so the token stops working once the password changes
     try {
-      await this.jwtService.verifyAsync(dto.resetToken, {
+      await this.jwtService.verifyAsync(rawToken, {
         secret: this.resetSecret(user.password),
       });
     } catch {
