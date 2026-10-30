@@ -25,16 +25,6 @@
 
 TKPEX Enterprise Workforce & Attendance Management System with NestJS backend, Prisma ORM, and Next.js Chakra UI frontend.
 
-## 📚 Project Documentation Guides
-
-- 🚀 **[End-to-End Beginner Installation & Setup Guide](docs/beginner-setup-guide.md)**: Complete step-by-step setup from database to frontend.
-- 🌐 **[Web API Architecture & Integration Guide](docs/web-api-architecture-guide.md)**: Beginner-friendly guide explaining how Next.js pages authenticate and call backend endpoints.
-- ⚡ **[NestJS Backend Architecture Guide](docs/nestjs-architecture-guide.md)**: Backend conventions, controllers, services, and repositories.
-- 🛠️ **[Module Generator Guide](docs/module-generator-guide.md)**: Interactive script to generate standard NestJS modules.
-- 🐳 **[Docker PostgreSQL Setup Guide](docs/docker-postgres-guide.md)**: Local PostgreSQL database setup using Docker Compose.
-- 💾 **[pnpm & exFAT Guide](docs/pnpm-exfat-guide.md)**: Running pnpm on exFAT drives without symlink issues.
-- 🏗️ **[Frontend Architecture & Implementation Guide](docs/frontend-architecture-and-implementation-guide.md)**: Feature organization, state management, RBAC, and responsive UI conventions.
-
 ## Project setup
 
 ```bash
