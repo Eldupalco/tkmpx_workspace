@@ -41,3 +41,10 @@ export interface UpdateSchedulePayload {
   isActive?: boolean;
 }
 
+
+/** Response of POST /schedules/bulk */
+export interface BulkScheduleResult {
+  success: boolean;
+  count: number;
+  data: ShiftSchedule[];
+}

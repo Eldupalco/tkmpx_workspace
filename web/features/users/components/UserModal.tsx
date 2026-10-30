@@ -20,7 +20,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { createUser, updateUser } from '../api/users.api';
-import { User } from '@/features/auth/types';
+import { User, UserRole } from '@/features/auth/types';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export function UserModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState<UserRole>('user');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -188,7 +188,7 @@ export function UserModal({
                   borderColor="slate.200"
                   fontSize="sm"
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
                 >
                   <option value="user">Staff / Employee</option>
                   <option value="admin">Admin / Manager</option>

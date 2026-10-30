@@ -21,6 +21,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { postLeaveRequest } from '../api/attendance.api';
+import { AttendanceStatus } from '../types';
 
 interface LeaveRequestModalProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export function LeaveRequestModal({
 }: LeaveRequestModalProps) {
   const toast = useToast();
   const [date, setDate] = useState('');
-  const [status, setStatus] = useState('on_leave');
+  const [status, setStatus] = useState<AttendanceStatus>('on_leave');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -115,7 +116,7 @@ export function LeaveRequestModal({
                   bg="slate.50"
                   borderColor="slate.200"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
                 >
                   <option value="on_leave">Full Day PTO / Vacation</option>
                   <option value="half_day">Half Day (AM or PM)</option>

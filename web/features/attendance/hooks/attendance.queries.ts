@@ -9,24 +9,7 @@ import {
   fetchTodayStatus,
   postPunch,
 } from '../api/attendance.api';
-
-export interface AttendanceSummary {
-  total: number;
-  present: number;
-  late: number;
-  halfDay: number;
-  absent: number;
-  onLeave: number;
-}
-
-export interface AttendanceHistoryFilters {
-  page: number;
-  limit: number;
-  search?: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-}
+import { AttendanceHistoryFilters, AttendanceSummary } from '../types';
 
 /** Query keys are scoped by user id so cached data never crosses accounts */
 export const attendanceKeys = {

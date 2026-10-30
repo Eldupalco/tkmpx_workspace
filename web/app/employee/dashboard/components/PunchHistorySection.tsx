@@ -24,17 +24,19 @@ import {
   AttendanceTable,
   downloadAttendanceCsv,
   PaginationMeta,
+  StatusFilter,
   useAttendanceHistory,
 } from '@/features/attendance';
 import { Pagination, DateRangePopover } from '@/components';
 
 export function PunchHistorySection() {
+
   const { user, token } = useAuth();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(1);
@@ -155,7 +157,7 @@ export function PunchHistorySection() {
             w="130px"
             value={statusFilter}
             onChange={(e) => {
-              setStatusFilter(e.target.value);
+              setStatusFilter(e.target.value as StatusFilter);
               setPage(1);
             }}
             bg="slate.50"

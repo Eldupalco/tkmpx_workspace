@@ -3,6 +3,9 @@ import { User } from '@/features/auth/types';
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half_day' | 'leave' | 'on_leave';
 
 /** Daily Time Record punch slots, always recorded in this order */
+/** Status filter in lists: one status or every status */
+export type StatusFilter = AttendanceStatus | 'all';
+
 export type PunchSlot = 'amIn' | 'amOut' | 'pmIn' | 'pmOut';
 
 export interface DailyPunches {
@@ -39,7 +42,7 @@ export interface FetchAttendanceParams {
   search?: string;
   userId?: string;
   employeeSearch?: string;
-  status?: string;
+  status?: StatusFilter;
   startDate?: string;
   endDate?: string;
   token?: string;
@@ -48,7 +51,7 @@ export interface FetchAttendanceParams {
 export interface TimesheetRecord extends DailyPunches {
   id: string;
   date: string;
-  status: string;
+  status: AttendanceStatus;
   hoursWorked: number;
   overtime: number;
   lateMinutes: number;
@@ -88,4 +91,49 @@ export interface TodayPunchStatus {
     graceMinutes: number;
   } | null;
   record: Attendance | null;
+}
+
+/** Counts returned by GET /attendances/summary */
+export interface AttendanceSummary {
+  total: number;
+  present: number;
+  late: number;
+  halfDay: number;
+  absent: number;
+  onLeave: number;
+}
+
+/** Optional employee + date range, used by the timesheet and CSV export */
+export interface AttendanceRangeParams {
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+/** Body of POST /attendances/leave; userId is honoured only for admins */
+export interface LeaveRequestData {
+  date: string;
+  status?: AttendanceStatus;
+  notes?: string;
+  userId?: string;
+}
+
+/** Employee's own punch history filters */
+export interface AttendanceHistoryFilters {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: AttendanceStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+/** Admin roster filters across all employees */
+export interface AttendanceRosterFilters {
+  page: number;
+  limit: number;
+  employeeSearch?: string;
+  status?: AttendanceStatus;
+  startDate?: string;
+  endDate?: string;
 }

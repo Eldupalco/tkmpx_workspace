@@ -1,6 +1,9 @@
-import { API_BASE_URL, apiFetch, apiRequest, apiRequestPage, getAuthHeaders } from '@/lib/api-client';
+import { apiDownload, apiRequest, apiRequestPage } from '@/lib/api-client';
 import {
   Attendance,
+  AttendanceRangeParams,
+  AttendanceSummary,
+  LeaveRequestData,
   PaginatedResponse,
   FetchAttendanceParams,
   TimesheetData,
@@ -13,7 +16,7 @@ export function fetchAttendances({
   search = '',
   userId = '',
   employeeSearch = '',
-  status = '',
+  status = 'all',
   startDate = '',
   endDate = '',
   token,
@@ -43,9 +46,9 @@ export function fetchTodayStatus(token: string, userId?: string): Promise<TodayP
   return apiRequest(`/attendances/today-status${query}`, { token, errorMessage: 'Failed to fetch today status' });
 }
 
-export function fetchAttendanceSummary(token: string, userId?: string) {
+export function fetchAttendanceSummary(token: string, userId?: string): Promise<AttendanceSummary> {
   const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-  return apiRequest<any>(`/attendances/summary${query}`, {
+  return apiRequest(`/attendances/summary${query}`, {
     token,
     errorMessage: 'Failed to fetch attendance summary',
   });
@@ -53,8 +56,9 @@ export function fetchAttendanceSummary(token: string, userId?: string) {
 
 export function fetchTimesheet(
   token: string,
-  params?: { startDate?: string; endDate?: string; userId?: string }
+  params?: AttendanceRangeParams
 ): Promise<TimesheetData> {
+
   const query = new URLSearchParams();
   if (params?.startDate) query.set('startDate', params.startDate);
   if (params?.endDate) query.set('endDate', params.endDate);
@@ -77,10 +81,7 @@ export function postPunch(token: string, notes?: string, userId?: string): Promi
   });
 }
 
-export function postLeaveRequest(
-  token: string,
-  data: { date: string; status?: string; notes?: string; userId?: string }
-) {
+export function postLeaveRequest(token: string, data: LeaveRequestData): Promise<Attendance> {
   return apiRequest('/attendances/leave', {
     method: 'POST',
     token,
@@ -91,7 +92,7 @@ export function postLeaveRequest(
 
 export function downloadAttendanceCsv(
   token: string,
-  paramsOrUserId?: string | { userId?: string; startDate?: string; endDate?: string }
+  paramsOrUserId?: string | AttendanceRangeParams
 ) {
   const query = new URLSearchParams();
   if (typeof paramsOrUserId === 'string') {
@@ -102,11 +103,8 @@ export function downloadAttendanceCsv(
     if (paramsOrUserId.endDate) query.set('endDate', paramsOrUserId.endDate);
   }
   const qs = query.toString() ? `?${query.toString()}` : '';
-  const url = `${API_BASE_URL}/attendances/export${qs}`;
 
-  // CSV is a file download, not a JSON envelope, so it uses apiFetch directly
-  apiFetch(url, { headers: getAuthHeaders(token) })
-    .then((res) => res.blob())
+  apiDownload(`/attendances/export${qs}`, { token, errorMessage: 'CSV export failed' })
     .then((blob) => {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

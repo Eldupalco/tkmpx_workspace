@@ -2,18 +2,10 @@
 
 import { SimpleGrid, Box, Skeleton } from '@chakra-ui/react';
 import { StatCard } from '@/components';
-
-interface PulseMetrics {
-  totalEmployees: number;
-  checkedInToday: number;
-  currentlyWorking: number;
-  lateToday: number;
-  onLeaveToday: number;
-  notPunchedYet: number;
-}
+import { DashboardMetrics } from '@/features/users';
 
 interface ExecutiveKpiGridProps {
-  pulse: PulseMetrics;
+  pulse: DashboardMetrics;
   loading: boolean;
 }
 

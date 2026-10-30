@@ -4,10 +4,11 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Spinner, Center, Text, VStack } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types';
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
+  allowedRoles?: UserRole[];
 }
 
 export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {

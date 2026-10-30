@@ -1,5 +1,11 @@
 import { apiRequest } from '@/lib/api-client';
-import { ShiftSchedule, TodaySchedule, BulkSchedulePayload, UpdateSchedulePayload } from '../types';
+import {
+  BulkSchedulePayload,
+  BulkScheduleResult,
+  ShiftSchedule,
+  TodaySchedule,
+  UpdateSchedulePayload,
+} from '../types';
 
 export async function fetchMySchedule(token: string): Promise<ShiftSchedule[]> {
   const data = await apiRequest<ShiftSchedule[]>('/schedules/my-schedule', {
@@ -13,7 +19,7 @@ export function fetchTodaySchedule(token: string): Promise<TodaySchedule> {
   return apiRequest('/schedules/today', { token, errorMessage: 'Failed to fetch today shift' });
 }
 
-export function postBulkSchedule(token: string, data: BulkSchedulePayload) {
+export function postBulkSchedule(token: string, data: BulkSchedulePayload): Promise<BulkScheduleResult> {
   return apiRequest('/schedules/bulk', {
     method: 'POST',
     token,

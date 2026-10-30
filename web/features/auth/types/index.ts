@@ -1,8 +1,11 @@
+/** Roles the API accepts; the backend validates the same list */
+export type UserRole = 'admin' | 'user';
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   avatarUrl?: string | null;
 }
 
@@ -29,7 +32,15 @@ export interface ForgotPasswordData {
 export interface ResetPasswordData {
   resetToken: string;
   newPassword: string;
-  token?: string;
+}
+
+export interface UpdateProfileData {
+  name?: string;
   email?: string;
+}
+
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
 }
 

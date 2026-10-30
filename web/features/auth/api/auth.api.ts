@@ -1,5 +1,13 @@
 import { apiRequest } from '@/lib/api-client';
-import { User, LoginCredentials, AuthResponse } from '../types';
+import {
+  AuthResponse,
+  ChangePasswordData,
+  LoginCredentials,
+  RegisterData,
+  ResetPasswordData,
+  UpdateProfileData,
+  User,
+} from '../types';
 
 export function loginUser(credentials: LoginCredentials): Promise<AuthResponse> {
   return apiRequest('/auth/login', {
@@ -13,7 +21,7 @@ export function fetchUserProfile(token: string): Promise<User> {
   return apiRequest('/auth/profile', { token, errorMessage: 'Session expired or unauthorized' });
 }
 
-export function updateProfile(token: string, data: { name?: string; email?: string }): Promise<User> {
+export function updateProfile(token: string, data: UpdateProfileData): Promise<User> {
   return apiRequest('/auth/profile', {
     method: 'PATCH',
     token,
@@ -22,10 +30,7 @@ export function updateProfile(token: string, data: { name?: string; email?: stri
   });
 }
 
-export function changePassword(
-  token: string,
-  data: { currentPassword: string; newPassword: string }
-): Promise<{ message: string }> {
+export function changePassword(token: string, data: ChangePasswordData): Promise<{ message: string }> {
   return apiRequest('/auth/change-password', {
     method: 'POST',
     token,
@@ -34,7 +39,7 @@ export function changePassword(
   });
 }
 
-export function registerUser(data: { name: string; email: string; password: string }): Promise<User> {
+export function registerUser(data: RegisterData): Promise<User> {
   return apiRequest('/auth/register', {
     method: 'POST',
     body: data,
@@ -50,15 +55,10 @@ export function requestForgotPassword(email: string): Promise<{ message: string;
   });
 }
 
-export function resetPasswordWithToken(data: {
-  resetToken?: string;
-  token?: string;
-  newPassword: string;
-  email?: string;
-}): Promise<{ message: string }> {
+export function resetPasswordWithToken(data: ResetPasswordData): Promise<{ message: string }> {
   return apiRequest('/auth/reset-password', {
     method: 'POST',
-    body: { resetToken: data.resetToken || data.token, newPassword: data.newPassword },
+    body: data,
     errorMessage: 'Failed to reset password',
   });
 }
