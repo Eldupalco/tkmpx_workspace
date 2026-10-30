@@ -1,20 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useToast, useDisclosure } from '@chakra-ui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth, User } from '@/features/auth';
-import {
-  postPunch,
-  downloadAttendanceCsv,
-  Attendance,
-  PaginationMeta,
-} from '@/features/attendance';
+import { Attendance } from '@/features/attendance';
 import {
   adminKeys,
   deleteUser,
   DashboardMetrics,
-  useAttendanceRoster,
   useCurrentlyIn,
   useDashboardMetrics,
   useUsers,
@@ -34,31 +28,6 @@ export function useAdminDashboard() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  // Tab 1: Attendance Roster State
-  const [employeeSearch, setEmployeeSearch] = useState<string>('');
-  const [debouncedEmployeeSearch, setDebouncedEmployeeSearch] =
-    useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
-
-  // Debounce employee search (300ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedEmployeeSearch(employeeSearch);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [employeeSearch]);
-
-  // Tab 3: Team Rostering State
-  const [teamSearchTerm, setTeamSearchTerm] = useState<string>('');
-  const [teamRoleFilter, setTeamRoleFilter] = useState<string>('all');
-  const [teamPage, setTeamPage] = useState<number>(1);
-  const [teamLimit, setTeamLimit] = useState<number>(5);
-
   // Modals state
   const scheduleDisclosure = useDisclosure();
   const manageShiftsDisclosure = useDisclosure();
@@ -71,80 +40,18 @@ export function useAdminDashboard() {
   const metricsQuery = useDashboardMetrics();
   const currentlyInQuery = useCurrentlyIn();
   const usersQuery = useUsers();
-  const rosterQuery = useAttendanceRoster({
-    page,
-    limit,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    employeeSearch: debouncedEmployeeSearch || undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
-  });
-
   const pulse = metricsQuery.data ?? EMPTY_PULSE;
   const currentlyInList: Attendance[] = currentlyInQuery.data ?? [];
   const usersList: User[] = useMemo(
     () => usersQuery.data ?? [],
     [usersQuery.data],
   );
-  const records: Attendance[] = rosterQuery.data?.data ?? [];
-  const meta: PaginationMeta = rosterQuery.data?.meta ?? {
-    total: 0,
-    page: 1,
-    limit,
-    totalPages: 1,
-  };
 
   // Refetch everything shown on the admin dashboard
   const loadAdminData = useCallback(
     () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
     [queryClient],
   );
-
-  // Filtered & paginated users for Tab 3
-  const filteredUsers = useMemo(() => {
-    return usersList.filter((u) => {
-      const q = teamSearchTerm.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q);
-      const matchesRole =
-        teamRoleFilter === 'all' ||
-        u.role.toLowerCase() === teamRoleFilter.toLowerCase();
-      return matchesSearch && matchesRole;
-    });
-  }, [usersList, teamSearchTerm, teamRoleFilter]);
-
-  const paginatedUsers = useMemo(() => {
-    const start = (teamPage - 1) * teamLimit;
-    return filteredUsers.slice(start, start + teamLimit);
-  }, [filteredUsers, teamPage, teamLimit]);
-
-  const teamTotalPages = Math.ceil(filteredUsers.length / teamLimit) || 1;
-
-  // Handlers
-  // Manager override: records the employee's next punch for today
-  const handleAdminPunch = async (record: Attendance) => {
-    if (!token) return;
-    try {
-      await postPunch(token, 'Manager override punch', record.userId);
-      toast({
-        title: `Punch recorded for ${record.users?.name || 'employee'}`,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      loadAdminData();
-    } catch (err: any) {
-      toast({
-        title: 'Punch override failed',
-        description: err.message,
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      });
-    }
-  };
 
   const openScheduleForUser = (userId?: string) => {
     setScheduleTargetUserId(userId || '');
@@ -201,70 +108,16 @@ export function useAdminDashboard() {
     }
   };
 
-  const handleExportCsv = () => {
-    if (!token) return;
-    downloadAttendanceCsv(token, {
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-    });
-  };
-
-  const resetRosterFilters = () => {
-    setEmployeeSearch('');
-    setStatusFilter('all');
-    setStartDate('');
-    setEndDate('');
-    setPage(1);
-  };
-
-  const resetTeamFilters = () => {
-    setTeamSearchTerm('');
-    setTeamRoleFilter('all');
-    setTeamPage(1);
-  };
-
   return {
     token,
     loadAdminData,
     pulse,
     pulseLoading: metricsQuery.isPending,
-    // Tab 1 (Attendance Roster)
-    roster: {
-      records,
-      meta,
-      loading: rosterQuery.isPending,
-      employeeSearch,
-      setEmployeeSearch,
-      statusFilter,
-      setStatusFilter,
-      startDate,
-      setStartDate,
-      endDate,
-      setEndDate,
-      page,
-      setPage,
-      limit,
-      setLimit,
-      resetFilters: resetRosterFilters,
-      onPunch: handleAdminPunch,
-    },
     // Tab 2 (Live Radar)
     currentlyInList,
     // Tab 3 (Team Rostering)
     team: {
       usersList,
-      filteredUsers,
-      paginatedUsers,
-      teamSearchTerm,
-      setTeamSearchTerm,
-      teamRoleFilter,
-      setTeamRoleFilter,
-      teamPage,
-      setTeamPage,
-      teamLimit,
-      setTeamLimit,
-      teamTotalPages,
-      resetFilters: resetTeamFilters,
       openCreateUser: handleOpenCreateUser,
       openEditUser: handleOpenEditUser,
       deleteUser: handleDeleteUser,
@@ -280,6 +133,5 @@ export function useAdminDashboard() {
     bulkAssignFromManage,
     userModalDisclosure,
     userToEdit,
-    handleExportCsv,
   };
 }

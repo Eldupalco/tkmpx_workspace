@@ -1,23 +1,17 @@
 'use client';
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
-import { fetchAttendances } from '@/features/attendance/api/attendance.api';
-import { fetchCurrentlyIn, fetchDashboardMetrics, fetchUsers } from '../api/users.api';
-
-export interface AttendanceRosterFilters {
-  page: number;
-  limit: number;
-  employeeSearch?: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-}
+import { fetchAttendances, postPunch } from '@/features/attendance/api/attendance.api';
+import { AttendanceRosterFilters } from '@/features/attendance/types';
+import { fetchCurrentlyIn, fetchDashboardMetrics, fetchUsers, fetchUsersPage } from '../api/users.api';
+import { UserListFilters } from '../types';
 
 /** Admin-wide data; invalidate `adminKeys.all` after any admin change */
 export const adminKeys = {
   all: ['admin'] as const,
   users: () => [...adminKeys.all, 'users'] as const,
+  usersPage: (filters: UserListFilters) => [...adminKeys.all, 'users-page', filters] as const,
   metrics: () => [...adminKeys.all, 'metrics'] as const,
   currentlyIn: () => [...adminKeys.all, 'currently-in'] as const,
   roster: (filters: AttendanceRosterFilters) => [...adminKeys.all, 'roster', filters] as const,
@@ -29,6 +23,17 @@ export function useUsers() {
     queryKey: adminKeys.users(),
     queryFn: () => fetchUsers(token!),
     enabled: !!token,
+  });
+}
+
+/** One page of the team list; keeps the previous page on screen while the next one loads */
+export function useUsersPage(filters: UserListFilters) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: adminKeys.usersPage(filters),
+    queryFn: () => fetchUsersPage(token!, filters),
+    enabled: !!token,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -58,5 +63,15 @@ export function useAttendanceRoster(filters: AttendanceRosterFilters) {
     queryFn: () => fetchAttendances({ ...filters, token: token! }),
     enabled: !!token,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Manager override: records an employee's next punch for today, then refreshes all admin data */
+export function useAdminPunch() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => postPunch(token!, 'Manager override punch', userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
   });
 }

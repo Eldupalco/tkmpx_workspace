@@ -16,49 +16,96 @@ import {
   Tooltip,
   IconButton,
   Skeleton,
+  useToast,
 } from '@chakra-ui/react';
-import { FiUser, FiRefreshCw, FiRotateCcw } from 'react-icons/fi';
-import { Attendance, PaginationMeta, AttendanceTable } from '@/features/attendance';
+import { useEffect, useState } from 'react';
+import { FiUser, FiRefreshCw, FiRotateCcw, FiDownload } from 'react-icons/fi';
+import { useAuth } from '@/features/auth';
+import {
+  Attendance,
+  AttendanceTable,
+  downloadAttendanceCsv,
+  PaginationMeta,
+  StatusFilter,
+} from '@/features/attendance';
+import { useAdminPunch, useAttendanceRoster } from '@/features/users';
 import { Pagination, DateRangePopover } from '@/components';
 
-interface AttendanceRosterTabProps {
-  records: Attendance[];
-  meta: PaginationMeta;
-  loading: boolean;
-  employeeSearch: string;
-  setEmployeeSearch: (val: string) => void;
-  statusFilter: string;
-  setStatusFilter: (val: string) => void;
-  startDate: string;
-  setStartDate: (val: string) => void;
-  endDate: string;
-  setEndDate: (val: string) => void;
-  setPage: (p: number) => void;
-  setLimit: (l: number) => void;
-  resetFilters: () => void;
-  onRefresh: () => void;
-  onPunch: (record: Attendance) => void;
-}
+/** Company-wide attendance list: owns its filters, data, punch override and CSV export */
+export function AttendanceRosterTab() {
+  const { token } = useAuth();
+  const toast = useToast();
 
-export function AttendanceRosterTab({
-  records,
-  meta,
-  loading,
-  employeeSearch,
-  setEmployeeSearch,
-  statusFilter,
-  setStatusFilter,
-  startDate,
-  setStartDate,
-  endDate,
-  setEndDate,
-  setPage,
-  setLimit,
-  resetFilters,
-  onRefresh,
-  onPunch,
-}: AttendanceRosterTabProps) {
+  // Filters
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Search runs 300ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(employeeSearch);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [employeeSearch]);
+
+  const rosterQuery = useAttendanceRoster({
+    page,
+    limit,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    employeeSearch: search || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+  const records = rosterQuery.data?.data ?? [];
+  const meta: PaginationMeta = rosterQuery.data?.meta ?? { total: 0, page: 1, limit, totalPages: 1 };
+  const loading = rosterQuery.isPending;
+
   const hasActiveFilters = Boolean(employeeSearch || statusFilter !== 'all' || startDate || endDate);
+
+  const resetFilters = () => {
+    setEmployeeSearch('');
+    setStatusFilter('all');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+  };
+
+  // Manager override: records the employee's next punch for today
+  const punchMutation = useAdminPunch();
+  const handlePunch = async (record: Attendance) => {
+    try {
+      await punchMutation.mutateAsync(record.userId);
+      toast({
+        title: `Punch recorded for ${record.users?.name || 'employee'}`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (err) {
+      toast({
+        title: 'Punch override failed',
+        description: err instanceof Error ? err.message : undefined,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Exports every employee for the date range shown in the table
+  const handleExportCsv = () => {
+    if (!token) return;
+    downloadAttendanceCsv(token, {
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    });
+  };
 
   return (
     <Box p={6} bg="white" border="1px solid" borderColor="slate.200" borderRadius="xl" shadow="xs">
@@ -84,20 +131,27 @@ export function AttendanceRosterTab({
           </Text>
         </Box>
 
-        <Button
-          size="sm"
-          variant="outline"
-          bg="white"
-          borderColor="slate.200"
-          color="slate.700"
-          borderRadius="lg"
-          fontSize="xs"
-          leftIcon={<Icon as={FiRefreshCw} boxSize={3} color="slate.500" />}
-          onClick={onRefresh}
-          flexShrink={0}
-        >
-          Refresh
-        </Button>
+        <HStack spacing={2} flexShrink={0}>
+          <Button
+            size="sm"
+            variant="outline"
+            fontSize="xs"
+            leftIcon={<Icon as={FiDownload} boxSize={3} color="slate.500" />}
+            onClick={handleExportCsv}
+          >
+            Export Company CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            fontSize="xs"
+            leftIcon={<Icon as={FiRefreshCw} boxSize={3} color="slate.500" />}
+            onClick={() => rosterQuery.refetch()}
+            isLoading={rosterQuery.isRefetching}
+          >
+            Refresh
+          </Button>
+        </HStack>
       </Flex>
 
       {/* Row 2: Search & Filters Toolbar */}
@@ -127,7 +181,7 @@ export function AttendanceRosterTab({
             w="130px"
             value={statusFilter}
             onChange={(e) => {
-              setStatusFilter(e.target.value);
+              setStatusFilter(e.target.value as StatusFilter);
               setPage(1);
             }}
             bg="slate.50"
@@ -184,7 +238,7 @@ export function AttendanceRosterTab({
         </Box>
       ) : (
         <>
-          <AttendanceTable records={records} onPunch={onPunch} />
+          <AttendanceTable records={records} onPunch={handlePunch} />
           <Pagination
             page={meta.page}
             totalPages={meta.totalPages}

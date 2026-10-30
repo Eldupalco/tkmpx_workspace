@@ -29,7 +29,6 @@ export default function AdminDashboardPage() {
     loadAdminData,
     pulse,
     pulseLoading,
-    roster,
     currentlyInList,
     team,
     scheduleDisclosure,
@@ -40,7 +39,6 @@ export default function AdminDashboardPage() {
     bulkAssignFromManage,
     userModalDisclosure,
     userToEdit,
-    handleExportCsv,
   } = useAdminDashboard();
 
   return (
@@ -49,7 +47,6 @@ export default function AdminDashboardPage() {
         {/* 1. Header with Title & Action Buttons */}
         <AdminHeader
           onAssignShifts={() => openScheduleForUser()}
-          onExportCsv={handleExportCsv}
         />
 
         {/* 2. Executive Pulse KPI Grid */}
@@ -87,20 +84,8 @@ export default function AdminDashboardPage() {
                 fontWeight: 'bold',
               }}
             >
-              <HStack spacing={2}>
-                <Text>Attendance Roster</Text>
-                <Badge
-                  variant="subtle"
-                  bg="slate.100"
-                  color="slate.700"
-                  borderRadius="full"
-                  px={2}
-                  py={0.2}
-                  fontSize="10px"
-                >
-                  {roster.meta.total}
-                </Badge>
-              </HStack>
+              {/* Record count is shown inside the tab, which owns the roster data */}
+              <Text>Attendance Roster</Text>
             </Tab>
 
             {/* Tab 2 Trigger */}
@@ -174,24 +159,7 @@ export default function AdminDashboardPage() {
           <TabPanels>
             {/* Tab 1: Attendance Roster */}
             <TabPanel p={0}>
-              <AttendanceRosterTab
-                records={roster.records}
-                meta={roster.meta}
-                loading={roster.loading}
-                employeeSearch={roster.employeeSearch}
-                setEmployeeSearch={roster.setEmployeeSearch}
-                statusFilter={roster.statusFilter}
-                setStatusFilter={roster.setStatusFilter}
-                startDate={roster.startDate}
-                setStartDate={roster.setStartDate}
-                endDate={roster.endDate}
-                setEndDate={roster.setEndDate}
-                setPage={roster.setPage}
-                setLimit={roster.setLimit}
-                resetFilters={roster.resetFilters}
-                onRefresh={loadAdminData}
-                onPunch={roster.onPunch}
-              />
+              <AttendanceRosterTab />
             </TabPanel>
 
             {/* Tab 2: Live On-Site Presence */}
@@ -202,19 +170,6 @@ export default function AdminDashboardPage() {
             {/* Tab 3: Shift Rostering & Team Management */}
             <TabPanel p={0}>
               <TeamRosteringTab
-                usersCount={team.usersList.length}
-                filteredUsers={team.filteredUsers}
-                paginatedUsers={team.paginatedUsers}
-                teamSearchTerm={team.teamSearchTerm}
-                setTeamSearchTerm={team.setTeamSearchTerm}
-                teamRoleFilter={team.teamRoleFilter}
-                setTeamRoleFilter={team.setTeamRoleFilter}
-                teamPage={team.teamPage}
-                setTeamPage={team.setTeamPage}
-                teamLimit={team.teamLimit}
-                setTeamLimit={team.setTeamLimit}
-                teamTotalPages={team.teamTotalPages}
-                resetFilters={team.resetFilters}
                 onOpenCreateUser={team.openCreateUser}
                 onOpenEditUser={team.openEditUser}
                 onDeleteUser={team.deleteUser}

@@ -31,23 +31,13 @@ import {
   FiEdit2,
   FiTrash2,
 } from 'react-icons/fi';
-import { User } from '@/features/auth';
+import { useEffect, useState } from 'react';
+import { User, UserRole } from '@/features/auth';
+import { useUsersPage } from '@/features/users';
 import { Pagination } from '@/components';
 
+// Actions open modals owned by the page, so they stay as props
 interface TeamRosteringTabProps {
-  usersCount: number;
-  filteredUsers: User[];
-  paginatedUsers: User[];
-  teamSearchTerm: string;
-  setTeamSearchTerm: (val: string) => void;
-  teamRoleFilter: string;
-  setTeamRoleFilter: (val: string) => void;
-  teamPage: number;
-  setTeamPage: (p: number) => void;
-  teamLimit: number;
-  setTeamLimit: (l: number) => void;
-  teamTotalPages: number;
-  resetFilters: () => void;
   onOpenCreateUser: () => void;
   onOpenEditUser: (user: User) => void;
   onDeleteUser: (id: string, name: string) => void;
@@ -55,25 +45,44 @@ interface TeamRosteringTabProps {
 }
 
 export function TeamRosteringTab({
-  usersCount,
-  filteredUsers,
-  paginatedUsers,
-  teamSearchTerm,
-  setTeamSearchTerm,
-  teamRoleFilter,
-  setTeamRoleFilter,
-  teamPage,
-  setTeamPage,
-  teamLimit,
-  setTeamLimit,
-  teamTotalPages,
-  resetFilters,
   onOpenCreateUser,
   onOpenEditUser,
   onDeleteUser,
   onManageShifts,
 }: TeamRosteringTabProps) {
+  // Filters
+  const [teamSearchTerm, setTeamSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
+  const [teamRoleFilter, setTeamRoleFilter] = useState<UserRole | 'all'>('all');
+  const [teamPage, setTeamPage] = useState(1);
+  const [teamLimit, setTeamLimit] = useState(5);
+
+  // Search runs 300ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(teamSearchTerm);
+      setTeamPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [teamSearchTerm]);
+
+  // Search, role filter and paging run on the server, so every employee is reachable
+  const usersQuery = useUsersPage({
+    page: teamPage,
+    limit: teamLimit,
+    search: search || undefined,
+    role: teamRoleFilter !== 'all' ? teamRoleFilter : undefined,
+  });
+  const paginatedUsers = usersQuery.data?.data ?? [];
+  const meta = usersQuery.data?.meta ?? { total: 0, page: 1, limit: teamLimit, totalPages: 1 };
+
   const hasActiveFilters = Boolean(teamSearchTerm || teamRoleFilter !== 'all');
+
+  const resetFilters = () => {
+    setTeamSearchTerm('');
+    setTeamRoleFilter('all');
+    setTeamPage(1);
+  };
 
   return (
     <Box p={6} bg="white" border="1px solid" borderColor="slate.200" borderRadius="xl" shadow="xs">
@@ -91,7 +100,7 @@ export function TeamRosteringTab({
               Team Members & Shift Rostering
             </Heading>
             <Badge variant="subtle" bg="slate.100" color="slate.700" borderRadius="full" px={2} py={0.2} fontSize="10px">
-              {usersCount} Total
+              {meta.total} Total
             </Badge>
           </HStack>
           <Text fontSize="xs" color="slate.500" mt={1}>
@@ -145,7 +154,7 @@ export function TeamRosteringTab({
             w="130px"
             value={teamRoleFilter}
             onChange={(e) => {
-              setTeamRoleFilter(e.target.value);
+              setTeamRoleFilter(e.target.value as UserRole | 'all');
               setTeamPage(1);
             }}
             bg="slate.50"
@@ -180,7 +189,7 @@ export function TeamRosteringTab({
       </Box>
 
       {/* Row 3: Table or Empty State */}
-      {filteredUsers.length === 0 ? (
+      {!usersQuery.isPending && paginatedUsers.length === 0 ? (
         <Box p={8} textAlign="center" bg="slate.50" borderRadius="xl" border="1px dashed" borderColor="slate.200">
           <Text fontWeight="bold" fontSize="sm" color="slate.700">
             No team members found
@@ -273,8 +282,8 @@ export function TeamRosteringTab({
 
           <Pagination
             page={teamPage}
-            totalPages={teamTotalPages}
-            total={filteredUsers.length}
+            totalPages={meta.totalPages}
+            total={meta.total}
             limit={teamLimit}
             onPageChange={setTeamPage}
             onLimitChange={(newLimit) => {
