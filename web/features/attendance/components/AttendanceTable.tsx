@@ -15,6 +15,7 @@ import {
   HStack,
   Icon,
 } from '@chakra-ui/react';
+import { formatAppDateKey, formatAppTime } from '@/lib/date-time';
 import { Attendance } from '../types';
 import { FiCalendar } from 'react-icons/fi';
 
@@ -48,8 +49,8 @@ function hoursWorked(r: Attendance): number {
 }
 
 export function AttendanceTable({ records, onPunch }: AttendanceTableProps) {
-  // Business date as YYYY-MM-DD (en-CA formats ISO-style)
-  const today = new Date().toLocaleDateString('en-CA');
+  // Philippine business date as YYYY-MM-DD
+  const today = formatAppDateKey(new Date());
   if (records.length === 0) {
     return (
       <Box
@@ -147,7 +148,7 @@ export function AttendanceTable({ records, onPunch }: AttendanceTableProps) {
       const d = new Date(timeStr);
       return (
         <Text as="span" fontWeight="600" color="slate.800" fontFamily="mono" fontSize="xs">
-          {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {formatAppTime(d)}
         </Text>
       );
     } catch {

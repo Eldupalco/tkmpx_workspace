@@ -93,10 +93,35 @@ function hoursBetween(from?: Date | string | null, to?: Date | string | null): n
   return Math.max(0, (new Date(to).getTime() - new Date(from).getTime()) / 3_600_000);
 }
 
+/**
+ * Start of paid afternoon time: PM In, but never before the end of the lunch break,
+ * so punching back in during the break does not count break time as worked.
+ * A missing schedule uses the default break, like nextPunch.
+ */
+export function afternoonStart(
+  pmIn: Date | string | null | undefined,
+  shift: Pick<ShiftTimes, 'breakStart' | 'breakEnd'> | null,
+): Date | null {
+  if (!pmIn) return null;
+  const punched = new Date(pmIn);
+  if (!hasBreak(shift)) return punched;
+
+  const breakEnd = shift?.breakEnd ?? DEFAULT_BREAK.breakEnd;
+  const earlyMinutes = toMinutes(breakEnd) - toMinutes(currentTime(punched));
+  if (earlyMinutes <= 0) return punched;
+  // Move to the break end on the same day: drop the seconds, add the missing minutes
+  const ms = punched.getTime();
+  return new Date(ms - (ms % 60_000) + earlyMinutes * 60_000);
+}
+
 /** Hours worked across both halves of the day, rounded to 2 decimals */
-export function hoursWorked(record: Punches): number {
+export function hoursWorked(
+  record: Punches,
+  shift: Pick<ShiftTimes, 'breakStart' | 'breakEnd'> | null,
+): number {
   const total =
-    hoursBetween(record.amIn, record.amOut) + hoursBetween(record.pmIn, record.pmOut);
+    hoursBetween(record.amIn, record.amOut) +
+    hoursBetween(afternoonStart(record.pmIn, shift), record.pmOut);
   return Number(total.toFixed(2));
 }
 

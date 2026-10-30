@@ -255,7 +255,7 @@ export class AttendancesService {
       completed: !onLeave && Boolean(record) && next === null,
       nextPunch: next,
       nextPunchLabel: next ? punchLabel(next, shift) : null,
-      hoursWorked: record && !onLeave ? hoursWorked(record) : 0,
+      hoursWorked: record && !onLeave ? hoursWorked(record, shift) : 0,
       hasBreak: hasBreak(shift),
       shift: shift
         ? {
@@ -362,7 +362,8 @@ export class AttendancesService {
     let totalUndertimeMinutes = 0;
 
     const days = records.map((rec: any) => {
-      const hours = hoursWorked(rec);
+      // Each record carries the shift it was measured against
+      const hours = hoursWorked(rec, rec.schedules ?? null);
       const overtime = Math.max(0, Number((hours - STANDARD_HOURS).toFixed(2)));
       if (hours > 0) daysWorked++;
       totalHours += hours;
@@ -428,7 +429,7 @@ export class AttendancesService {
       punchTime(r.amOut),
       punchTime(r.pmIn),
       punchTime(r.pmOut),
-      hoursWorked(r),
+      hoursWorked(r, r.schedules ?? null),
       r.lateMinutes,
       r.undertimeMinutes,
       r.status,

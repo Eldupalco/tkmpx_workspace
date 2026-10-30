@@ -27,7 +27,8 @@ export function EmployeeHeader() {
   };
 
   return (
-    <HStack justify="space-between" align="center" wrap="wrap" gap={4}>
+    <HStack justify="space-b
+    etween" align="center" wrap="wrap" gap={4}>
       <Box>
         <Heading size="md" color="slate.900" fontWeight="extrabold" letterSpacing="-0.02em">
           Welcome, {user?.name || 'Employee'}

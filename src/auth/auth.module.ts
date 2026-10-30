@@ -13,7 +13,7 @@ import { getJwtSecret } from './jwt-secret.js';
       global: true,
       useFactory: () => ({
         secret: getJwtSecret(),
-        signOptions: { expiresIn: '15m' },
+        signOptions: { expiresIn: '55m' },
       }),
     }),
   ],
@@ -21,4 +21,4 @@ import { getJwtSecret } from './jwt-secret.js';
   providers: [AuthService, JwtAuthGuard, RolesGuard],
   exports: [AuthService, JwtAuthGuard, RolesGuard, JwtModule],
 })
-export class AuthModule {}
+export class AuthModule { }

@@ -25,7 +25,12 @@ export interface Attendance extends DailyPunches {
   notes?: string | null;
   users?: User | null;
   /** Shift the punches were measured against; breakStart null = no lunch break */
-  schedules?: { shiftName?: string | null; dayOfWeek: number; breakStart: string | null } | null;
+  schedules?: {
+    shiftName?: string | null;
+    dayOfWeek: number;
+    breakStart: string | null;
+    breakEnd: string | null;
+  } | null;
 }
 
 import type { PaginationMeta } from '@/lib/api-client';

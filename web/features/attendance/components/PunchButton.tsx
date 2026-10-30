@@ -12,6 +12,7 @@ import {
   SimpleGrid,
 } from '@chakra-ui/react';
 import { FiClock, FiLogIn, FiLogOut, FiCheck } from 'react-icons/fi';
+import { formatAppLongDate, formatAppTime } from '@/lib/date-time';
 import { PunchSlot, TodayPunchStatus } from '../types';
 
 const SLOTS: { key: PunchSlot; label: string }[] = [
@@ -34,9 +35,7 @@ interface PunchButtonProps {
 }
 
 function formatPunch(value?: string | null) {
-  return value
-    ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '—';
+  return value ? formatAppTime(value) : '—';
 }
 
 function dutyBadge(status: TodayPunchStatus | null) {
@@ -62,21 +61,8 @@ export function PunchButton({ status, isLoading, onPunch }: PunchButtonProps) {
   useEffect(() => {
     function updateClock() {
       const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-      );
-      setCurrentDate(
-        now.toLocaleDateString([], {
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })
-      );
+      setCurrentTime(formatAppTime(now, { includeSeconds: true }));
+      setCurrentDate(formatAppLongDate(now));
 
       if (openSince) {
         const diffMs = now.getTime() - new Date(openSince).getTime();

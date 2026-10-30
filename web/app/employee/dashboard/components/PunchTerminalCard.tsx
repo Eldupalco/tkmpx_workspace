@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Box, Input, useToast } from '@chakra-ui/react';
 import { PunchButton, usePunch, useTodayStatus } from '@/features/attendance';
+import { formatAppTime } from '@/lib/date-time';
 
 export function PunchTerminalCard() {
   const toast = useToast();
@@ -19,7 +20,7 @@ export function PunchTerminalCard() {
 
       toast({
         title: `${label} Recorded`,
-        description: `Punched at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        description: `Punched at ${formatAppTime(new Date())}`,
         status: 'success',
         duration: 3000,
         isClosable: true,
