@@ -40,6 +40,7 @@ function formatPunch(value?: string | null) {
 }
 
 function dutyBadge(status: TodayPunchStatus | null) {
+
   const record = status?.record;
   if (status?.onLeave) return { label: '● ON LEAVE', scheme: 'purple' };
   if (status?.completed) return { label: '✓ DAY COMPLETE', scheme: 'blue' };
@@ -174,6 +175,7 @@ export function PunchButton({ status, isLoading, onPunch }: PunchButtonProps) {
               _hover={isInPunch ? { bg: 'brand.700', shadow: 'md' } : { bg: 'red.50' }}
             >
               Punch {status?.nextPunchLabel}
+
             </Button>
           ) : (
             <Button

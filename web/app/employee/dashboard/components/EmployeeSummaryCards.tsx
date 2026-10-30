@@ -7,6 +7,7 @@ import { AttendanceSummary, useAttendanceSummary } from '@/features/attendance';
 const EMPTY_SUMMARY: AttendanceSummary = { total: 0, present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 };
 
 export function EmployeeSummaryCards() {
+
   const { data: summary = EMPTY_SUMMARY, isPending } = useAttendanceSummary();
 
   if (isPending) {
@@ -25,6 +26,7 @@ export function EmployeeSummaryCards() {
 
   return (
     <SimpleGrid columns={{ base: 2, sm: 4 }} spacing={4}>
+
       <StatCard
         title="Present Shifts"
         value={summary.present}
@@ -33,6 +35,7 @@ export function EmployeeSummaryCards() {
         badgeScheme="green"
         tooltip="Completed work shifts logged on schedule"
       />
+
       <StatCard
         title="Late Arrivals"
         value={summary.late}
@@ -57,6 +60,8 @@ export function EmployeeSummaryCards() {
         badgeScheme="gray"
         tooltip="Cumulative attendance sessions recorded across all time"
       />
+
     </SimpleGrid>
+
   );
 }

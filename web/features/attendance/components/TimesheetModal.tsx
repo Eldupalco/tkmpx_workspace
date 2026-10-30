@@ -236,8 +236,8 @@ export function TimesheetModal({
                                 r.status === 'present'
                                   ? 'green'
                                   : r.status === 'late'
-                                  ? 'orange'
-                                  : 'purple'
+                                    ? 'orange'
+                                    : 'purple'
                               }
                               variant="subtle"
                               fontSize="10px"
