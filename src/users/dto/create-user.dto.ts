@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsDateString,
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
+
+/** Roles understood by RolesGuard; any other value is rejected */
+export const USER_ROLES = ['admin', 'user'] as const;
+export type UserRole = (typeof USER_ROLES)[number];
 
 export class CreateUserDto {
   @ApiProperty({ example: 'Sample name' })
@@ -25,8 +29,8 @@ export class CreateUserDto {
   @MinLength(6)
   password: string;
 
-  @ApiPropertyOptional({ example: 'Sample role' })
+  @ApiPropertyOptional({ enum: USER_ROLES, example: 'user' })
   @IsOptional()
-  @IsString()
-  role?: string;
+  @IsIn(USER_ROLES)
+  role?: UserRole;
 }

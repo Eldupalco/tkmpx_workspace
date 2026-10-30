@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { USER_ROLES, type UserRole } from './create-user.dto.js';
 
 export class QueryUserDto {
   @ApiPropertyOptional({
@@ -48,8 +49,8 @@ export class QueryUserDto {
   @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'desc';
 
-  @ApiPropertyOptional({ description: 'Filter by role' })
+  @ApiPropertyOptional({ description: 'Filter by role', enum: USER_ROLES })
   @IsOptional()
-  @IsString()
-  role?: string;
+  @IsIn(USER_ROLES)
+  role?: UserRole;
 }
